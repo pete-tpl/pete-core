@@ -4,6 +4,9 @@ version = "0.1.0"
 authors = ["Sergei Beljakov <1899416+tasmanianfox@users.noreply.github.com>"]
 edition = "2018"
 
+license = "MIT"
+description = "A core module of Parametrized Extendable Template Engine aka PETE"
+
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
