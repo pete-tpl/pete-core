@@ -1,14 +1,19 @@
 use crate::engine::RenderResult;
 use crate::error::Error;
-use crate::nodes::Node;
+use crate::nodes::{BaseNode, Node};
+use crate::parameter::ParameterStore;
 
 pub struct StaticNode {
-
+    base_node: BaseNode,
+    content: String,
 }
 
 impl StaticNode {
     fn create() -> StaticNode {
-        StaticNode{}
+        StaticNode{
+            base_node: BaseNode::new(),
+            content: String::new(),
+        }
     }
 
     pub fn try_create_from_template(template: &String, offset: usize) -> Option<Box<dyn Node>> {
@@ -16,13 +21,19 @@ impl StaticNode {
         if substr.starts_with("{#") || substr.starts_with("{%") || substr.starts_with("{{") {
             None
         } else {
-            Some(Box::from(StaticNode::create()))
+            let mut node = StaticNode::create();
+            node.base_node.start_offset = offset;
+            Some(Box::from(node))
         }
     }
 }
 
 impl Node for StaticNode {
-    fn render(&self, template: &String, offset: usize) -> Result<RenderResult, Error> {
+    fn add_child(&mut self, _child: Box<dyn Node>) {
+        panic!("Cannot add a child to static node");
+    }
+
+    fn build(&mut self, template: &String, offset: usize) -> RenderResult {
         let substr = template[offset..].to_string();
         let mut end_pos = substr.find("{#");
         if end_pos.is_none() {
@@ -32,7 +43,13 @@ impl Node for StaticNode {
             end_pos = substr.find("{{");
         }
         let end_pos = if end_pos.is_none() { substr.len() } else { end_pos.unwrap() };
-        Ok(RenderResult::EndOfNode(substr[0..end_pos].to_string(), end_pos-1))
+        self.base_node.end_offset = end_pos;
+        self.content = substr[0..self.base_node.end_offset].to_string();
+        RenderResult::EndOfNode(self.base_node.end_offset-1)
+    }
+
+    fn render(&self, _parameters: &ParameterStore) -> Result<String, Error> {
+        Ok(self.content.clone())
     }
 }
 
@@ -42,24 +59,20 @@ mod tests {
 
     #[test]
     fn test_nodes_static_render_static_only() {
-        let node = StaticNode::create();
-        let result = node.render(&String::from("Hello, World!"), 0);
+        let mut node = StaticNode::create();
+        let result = node.build(&String::from("Hello, World!"), 0);
         match result {
-            Ok(result) => {
-                match result {
-                    RenderResult::EndOfNode(string, offset) => {
-                        assert_eq!(String::from("Hello, World!"), string);
-                        assert_eq!(offset, 12);
-                    },
-                    _ => panic!("Unexpected node")
-                }
-            }
-            Err(_) => panic!("Expected OK, but got err")
+            RenderResult::EndOfNode(offset) => {
+                assert_eq!(offset, 12);
+            },
+            _ => panic!("Failed to build a node")
         }
-        
-        // let engine = Engine::new();
-        // let result = engine.render(String::from("Hello, World!"), ParameterStore::new());
-        // assert_eq!(result.unwrap(), "Hello, World!");
+        match node.render(&ParameterStore::new()) {
+            Ok(string) => {
+                assert_eq!(String::from("Hello, World!"), string);
+            },
+            Err(e) => panic!("Expected to render a node, buy got an error: {}", e)
+        }
     }
 
 }
