@@ -2,13 +2,15 @@ use std::fmt;
 use std::error::Error as StdError;
 
 pub struct Error {
-    pub message: String
+    pub message: String,
+    pub offset: Option<usize>,
 }
 
 impl Error {
-    pub fn create(message: String) -> Error {
+    pub fn create(message: String, offset: Option<usize>) -> Error {
         Error{
-            message: message.clone()
+            message: message.clone(),
+            offset: offset,
         }
     }
 }
@@ -38,6 +40,6 @@ impl fmt::Display for Error {
 
 impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Error {
-        Error::create(err.to_string())
+        Error::create(err.to_string(), None)
     }
 }

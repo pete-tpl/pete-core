@@ -39,7 +39,7 @@ impl Engine {
             }
 
             if parsed_node.is_none() {
-                return Err(Error::create("Cannot recognize a node".to_string()));
+                return Err(Error::create("Cannot recognize a node".to_string(), Some(cursor)));
             }
 
             let mut parsed_node = parsed_node.unwrap();
@@ -52,7 +52,7 @@ impl Engine {
                     return Err(err)
                 },
                 _ => {
-                    return Err(Error::create("Rendering results except RenderResult::EndOfNode are not implemented".to_string()));
+                    return Err(Error::create("Rendering results except RenderResult::EndOfNode are not implemented".to_string(), Some(cursor)));
                 }
             }
         }
