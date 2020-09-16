@@ -4,10 +4,12 @@ use crate::parameter::ParameterStore;
 use crate::nodes::Node;
 use crate::nodes::NodeCreator;
 use crate::nodes::container::ContainerNode;
+use crate::nodes::comment::CommentNode;
 use crate::nodes::static_node::StaticNode;
 
-const NODE_CREATORS: [NodeCreator; 1] = [
-    StaticNode::try_create_from_template
+const NODE_CREATORS: [NodeCreator; 2] = [
+    CommentNode::try_create_from_template,
+    StaticNode::try_create_from_template,
 ];
 
 pub struct Engine {}
@@ -46,7 +48,7 @@ impl Engine {
             match parsed_node.build(&template, cursor) {
                 RenderResult::EndOfNode(offset) => {
                     parent_node.add_child(parsed_node);
-                    cursor += offset + 1;
+                    cursor = offset + 1;
                 },
                 RenderResult::Error(err) => {
                     return Err(err)
@@ -78,7 +80,15 @@ mod tests {
     #[test]
     fn test_engine_render_static_and_comment() {
         let engine = Engine::new();
-        let result = engine.render(String::from("Hello, World!{# Some comment here #}Nice to meet you."), ParameterStore::new());
+        let result = engine.render(String::from("Hello, World!{# Some comment here #} Nice to meet you."), ParameterStore::new());
+        assert_eq!(result.is_ok(), true);
+        assert_eq!(result.unwrap(), "Hello, World! Nice to meet you.");
+    }
+
+    #[test]
+    fn test_engine_render_static_and_unknown_tag() {
+        let engine = Engine::new();
+        let result = engine.render(String::from("Hello, World!{% unknown %}unkn0wn{% endunknown %}Nice to meet you."), ParameterStore::new());
         assert_eq!(result.is_err(), true);
         assert_eq!(result.unwrap_err().message, "Cannot recognize a node");
     }

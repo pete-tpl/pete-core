@@ -1,4 +1,5 @@
 pub mod container;
+pub mod comment;
 pub mod static_node;
 
 use crate::engine::RenderResult;
