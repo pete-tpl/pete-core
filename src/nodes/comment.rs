@@ -15,8 +15,7 @@ impl CommentNode {
     }
 
     pub fn try_create_from_template(template: &String, offset: usize) -> Option<Box<dyn Node>> {
-        let substr = template[offset..].to_string();
-        if substr.starts_with("{#") {
+        if template.starts_with("{#") {
             let mut node = CommentNode::create();
             node.base_node.start_offset = offset;
             Some(Box::from(node))
@@ -32,13 +31,13 @@ impl Node for CommentNode {
     }
 
     fn build(&mut self, template: &String, offset: usize) -> RenderResult {
-        let substr = template[offset..].to_string();
-        let end_pos = substr.find("#}");
+        let end_pos = template.find("#}");
         match end_pos {
             None => RenderResult::Error(Error::create("Comment is not closed".to_string(), Some(offset))),
-            Some(pos) => {
-                self.base_node.end_offset = offset + pos + "#}".len();
-                RenderResult::EndOfNode(self.base_node.end_offset-1)
+            Some(end_pos) => {
+                let end_pos_with_tag = end_pos - 1 + "#}".len();
+                self.base_node.end_offset = offset + end_pos_with_tag;
+                RenderResult::EndOfNode(end_pos_with_tag)
             }
         }
     }

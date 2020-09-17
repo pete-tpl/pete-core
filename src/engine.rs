@@ -28,13 +28,18 @@ impl Engine {
     }
 
     pub fn render(&self, template: String, parameters: ParameterStore) -> Result<String, Error> {
-        let template_len = template.len();
         let mut cursor = 0;
         let mut parent_node:Box<dyn Node> = Box::from(ContainerNode::create());
-        while cursor < template_len {
+        let mut template_remain = template.clone();
+        let mut prev_template_remain_len = template_remain.len()+1;
+        while template_remain.len() > 0 {
+            if template_remain.len() >= prev_template_remain_len {
+                panic!("An infinite loop detected.")
+            }
+            prev_template_remain_len = template_remain.len();
             let mut parsed_node: Option<Box<dyn Node>> = None;
             for node_creator in NODE_CREATORS.iter() {
-                parsed_node = node_creator(&template, cursor);
+                parsed_node = node_creator(&template_remain, cursor);
                 if parsed_node.is_some() {
                     break;
                 }
@@ -45,10 +50,11 @@ impl Engine {
             }
 
             let mut parsed_node = parsed_node.unwrap();
-            match parsed_node.build(&template, cursor) {
+            match parsed_node.build(&template_remain, cursor) {
                 RenderResult::EndOfNode(offset) => {
+                    template_remain = template_remain[offset+1..].to_string();
                     parent_node.add_child(parsed_node);
-                    cursor = offset + 1;
+                    cursor += offset;
                 },
                 RenderResult::Error(err) => {
                     return Err(err)

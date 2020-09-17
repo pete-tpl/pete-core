@@ -17,8 +17,7 @@ impl StaticNode {
     }
 
     pub fn try_create_from_template(template: &String, offset: usize) -> Option<Box<dyn Node>> {
-        let substr = template[offset..].to_string();
-        if substr.starts_with("{#") || substr.starts_with("{%") || substr.starts_with("{{") {
+        if template.starts_with("{#") || template.starts_with("{%") || template.starts_with("{{") {
             None
         } else {
             let mut node = StaticNode::create();
@@ -34,18 +33,17 @@ impl Node for StaticNode {
     }
 
     fn build(&mut self, template: &String, offset: usize) -> RenderResult {
-        let substr = template[offset..].to_string();
-        let mut end_pos = substr.find("{#");
+        let mut end_pos = template.find("{#");
         if end_pos.is_none() {
-            end_pos = substr.find("{%");
+            end_pos = template.find("{%");
         }
         if end_pos.is_none() {
-            end_pos = substr.find("{{");
+            end_pos = template.find("{{");
         }
-        let end_pos = if end_pos.is_none() { substr.len() } else { end_pos.unwrap() };
+        let end_pos = (if end_pos.is_none() { template.len() } else { end_pos.unwrap() }) - 1;
         self.base_node.end_offset = offset + end_pos;
-        self.content = substr[0..end_pos].to_string();
-        RenderResult::EndOfNode(self.base_node.end_offset-1)
+        self.content = template[0..end_pos+1].to_string();
+        RenderResult::EndOfNode(end_pos)
     }
 
     fn render(&self, _parameters: &ParameterStore) -> Result<String, Error> {
