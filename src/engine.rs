@@ -39,7 +39,7 @@ impl Engine {
             prev_template_remain_len = template_remain.len();
             let mut parsed_node: Option<Box<dyn Node>> = None;
             for node_creator in NODE_CREATORS.iter() {
-                parsed_node = node_creator(&template_remain, cursor);
+                parsed_node = node_creator(&template_remain);
                 if parsed_node.is_some() {
                     break;
                 }

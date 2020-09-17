@@ -15,6 +15,8 @@ pub trait Node {
 pub struct BaseNode {
     children: Vec<Box<dyn Node>>,
     end_offset: usize,
+    has_nolinebreak_beginning: bool,
+    has_nolinebreak_end: bool,
     start_offset: usize,
 }
 
@@ -23,9 +25,11 @@ impl BaseNode {
         BaseNode {
             children: Vec::new(),
             end_offset: 0,
+            has_nolinebreak_beginning: false,
+            has_nolinebreak_end: false,
             start_offset: 0
         }
     }
 }
 
-pub type NodeCreator = fn(template: &String, offset: usize) -> Option<Box<dyn Node>>;
+pub type NodeCreator = fn(template: &String) -> Option<Box<dyn Node>>;

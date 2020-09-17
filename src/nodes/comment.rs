@@ -14,11 +14,9 @@ impl CommentNode {
         }
     }
 
-    pub fn try_create_from_template(template: &String, offset: usize) -> Option<Box<dyn Node>> {
+    pub fn try_create_from_template(template: &String) -> Option<Box<dyn Node>> {
         if template.starts_with("{#") {
-            let mut node = CommentNode::create();
-            node.base_node.start_offset = offset;
-            Some(Box::from(node))
+            Some(Box::from(CommentNode::create()))
         } else {
             None
         }
@@ -31,12 +29,15 @@ impl Node for CommentNode {
     }
 
     fn build(&mut self, template: &String, offset: usize) -> RenderResult {
+        self.base_node.has_nolinebreak_beginning = template[2..3].to_string() == "-";
         let end_pos = template.find("#}");
         match end_pos {
             None => RenderResult::Error(Error::create("Comment is not closed".to_string(), Some(offset))),
             Some(end_pos) => {
                 let end_pos_with_tag = end_pos - 1 + "#}".len();
                 self.base_node.end_offset = offset + end_pos_with_tag;
+                self.base_node.has_nolinebreak_end = template[end_pos-1..end_pos].to_string() == "-";
+                self.base_node.start_offset = offset;
                 RenderResult::EndOfNode(end_pos_with_tag)
             }
         }
@@ -52,12 +53,12 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_nodes_static_render_static_only() {
+    fn test_nodes_static_render_with_static() {
         let mut node = CommentNode::create();
-        let result = node.build(&String::from("Hello, {# Here is comment #}World!"), 7);
+        let result = node.build(&String::from("{# Here is comment #}World!"), 7);
         match result {
             RenderResult::EndOfNode(offset) => {
-                assert_eq!(offset, 27);
+                assert_eq!(offset, 20);
             },
             _ => panic!("Failed to build a node")
         }
@@ -69,4 +70,54 @@ mod tests {
         }
     }
 
+    #[test]
+    fn test_nodes_static_nolinebraks() {
+        let mut node = CommentNode::create();
+        match node.build(&String::from("{#- Here is comment -#}World!"), 21) {
+            RenderResult::EndOfNode(offset) => {
+                assert_eq!(offset, 22);
+                assert_eq!(node.base_node.start_offset, 21);
+                assert_eq!(node.base_node.end_offset, 43);
+                assert_eq!(node.base_node.has_nolinebreak_beginning, true);
+                assert_eq!(node.base_node.has_nolinebreak_end, true);
+            },
+            _ => panic!("Failed to build a node")
+        }
+
+        let mut node = CommentNode::create();
+        match node.build(&String::from("{# Here is comment -#}World!"), 21) {
+            RenderResult::EndOfNode(offset) => {
+                assert_eq!(offset, 21);
+                assert_eq!(node.base_node.start_offset, 21);
+                assert_eq!(node.base_node.end_offset, 42);
+                assert_eq!(node.base_node.has_nolinebreak_beginning, false);
+                assert_eq!(node.base_node.has_nolinebreak_end, true);
+            },
+            _ => panic!("Failed to build a node")
+        }
+
+        let mut node = CommentNode::create();
+        match node.build(&String::from("{#- Here is comment #}World!"), 21) {
+            RenderResult::EndOfNode(offset) => {
+                assert_eq!(offset, 21);
+                assert_eq!(node.base_node.start_offset, 21);
+                assert_eq!(node.base_node.end_offset, 42);
+                assert_eq!(node.base_node.has_nolinebreak_beginning, true);
+                assert_eq!(node.base_node.has_nolinebreak_end, false);
+            },
+            _ => panic!("Failed to build a node")
+        }
+
+        let mut node = CommentNode::create();
+        match node.build(&String::from("{# Here is comment #}World!"), 21) {
+            RenderResult::EndOfNode(offset) => {
+                assert_eq!(offset, 20);
+                assert_eq!(node.base_node.start_offset, 21);
+                assert_eq!(node.base_node.end_offset, 41);
+                assert_eq!(node.base_node.has_nolinebreak_beginning, false);
+                assert_eq!(node.base_node.has_nolinebreak_end, false);
+            },
+            _ => panic!("Failed to build a node")
+        }
+    }
 }

@@ -16,13 +16,11 @@ impl StaticNode {
         }
     }
 
-    pub fn try_create_from_template(template: &String, offset: usize) -> Option<Box<dyn Node>> {
+    pub fn try_create_from_template(template: &String) -> Option<Box<dyn Node>> {
         if template.starts_with("{#") || template.starts_with("{%") || template.starts_with("{{") {
             None
         } else {
-            let mut node = StaticNode::create();
-            node.base_node.start_offset = offset;
-            Some(Box::from(node))
+            Some(Box::from(StaticNode::create()))
         }
     }
 }
@@ -43,6 +41,7 @@ impl Node for StaticNode {
         let end_pos = (if end_pos.is_none() { template.len() } else { end_pos.unwrap() }) - 1;
         self.base_node.end_offset = offset + end_pos;
         self.content = template[0..end_pos+1].to_string();
+        self.base_node.start_offset = offset;
         RenderResult::EndOfNode(end_pos)
     }
 
