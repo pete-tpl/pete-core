@@ -1,5 +1,4 @@
-use crate::engine::RenderResult;
-use crate::error::Error;
+use crate::engine::{NodeBuildResult, RenderResult};
 use crate::nodes::{BaseNode, Node};
 use crate::parameter::ParameterStore;
 
@@ -30,7 +29,7 @@ impl Node for StaticNode {
         panic!("Cannot add a child to static node");
     }
 
-    fn build(&mut self, template: &String, offset: usize) -> RenderResult {
+    fn build(&mut self, template: &String, offset: usize) -> NodeBuildResult {
         let mut end_pos = template.find("{#");
         if end_pos.is_none() {
             end_pos = template.find("{%");
@@ -42,11 +41,11 @@ impl Node for StaticNode {
         self.base_node.end_offset = offset + end_pos;
         self.content = template[0..end_pos+1].to_string();
         self.base_node.start_offset = offset;
-        RenderResult::EndOfNode(end_pos)
+        NodeBuildResult::EndOfNode(end_pos)
     }
 
-    fn render(&self, _parameters: &ParameterStore) -> Result<String, Error> {
-        Ok(self.content.clone())
+    fn render(&self, _parameters: &ParameterStore) -> RenderResult {
+        RenderResult::Ok(self.content.clone())
     }
 }
 
@@ -59,16 +58,16 @@ mod tests {
         let mut node = StaticNode::create();
         let result = node.build(&String::from("Hello, World!"), 0);
         match result {
-            RenderResult::EndOfNode(offset) => {
+            NodeBuildResult::EndOfNode(offset) => {
                 assert_eq!(offset, 12);
             },
             _ => panic!("Failed to build a node")
         }
         match node.render(&ParameterStore::new()) {
-            Ok(string) => {
+            RenderResult::Ok(string) => {
                 assert_eq!(String::from("Hello, World!"), string);
             },
-            Err(e) => panic!("Expected to render a node, but got an error: {}", e)
+            RenderResult::TemplateError(e) => panic!("Expected to render a node, but got an error: {}", e)
         }
     }
 

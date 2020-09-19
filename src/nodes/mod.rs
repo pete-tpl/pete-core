@@ -2,14 +2,13 @@ pub mod container;
 pub mod comment;
 pub mod static_node;
 
-use crate::engine::RenderResult;
-use crate::error::Error;
+use crate::engine::{NodeBuildResult, RenderResult};
 use crate::parameter::ParameterStore;
 
 pub trait Node {
     fn add_child(&mut self, child: Box<dyn Node>);
-    fn build(&mut self, template: &String, offset: usize) -> RenderResult;
-    fn render(&self, parameters: &ParameterStore) -> Result<String, Error>;
+    fn build(&mut self, template: &String, offset: usize) -> NodeBuildResult;
+    fn render(&self, parameters: &ParameterStore) -> RenderResult;
 }
 
 pub struct BaseNode {

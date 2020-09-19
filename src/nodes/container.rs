@@ -1,5 +1,4 @@
-use crate::engine::RenderResult;
-use crate::error::Error;
+use crate::engine::{NodeBuildResult, RenderResult};
 use crate::nodes::{BaseNode, Node};
 use crate::parameter::ParameterStore;
 
@@ -21,16 +20,24 @@ impl Node for ContainerNode {
         self.base_node.children.push(child);
     }
 
-    fn build(&mut self, _template: &String, _offset: usize) -> RenderResult {
-        RenderResult::NestedNode(0)
+    fn build(&mut self, _template: &String, _offset: usize) -> NodeBuildResult {
+        NodeBuildResult::NestedNode(0)
     }
 
-    fn render(&self, parameters: &ParameterStore) -> Result<String, Error> {
+    fn render(&self, parameters: &ParameterStore) -> RenderResult {
         let mut result = String::new();
         for child in &self.base_node.children {
-            result += child.render(parameters)?.as_str();
+            match child.render(parameters) {
+                RenderResult::Ok(r) => {
+                    result += r.as_str();
+                },
+                RenderResult::TemplateError(e) => {
+                    return RenderResult::TemplateError(e);
+                }
+            }
+            
         }
 
-        Ok(result)
+        RenderResult::Ok(result)
     }
 }
