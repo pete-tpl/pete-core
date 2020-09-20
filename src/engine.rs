@@ -41,7 +41,7 @@ impl Engine {
         None
     }
 
-    pub fn render(&self, template: String, parameters: ParameterStore) -> RenderResult {
+    fn build(&self, template: &String) -> Result<Box<dyn Node>, TemplateError> {
         let mut parent_node:Box<dyn Node> = Box::from(ContainerNode::create());
         let mut build_context = BuildContext::new();
         build_context.template = template.clone();
@@ -79,6 +79,11 @@ impl Engine {
                 }
             }
         }
+        Ok(parent_node)
+    } 
+
+    pub fn render(&self, template: String, parameters: ParameterStore) -> RenderResult {
+        let parent_node = self.build(&template)?;
         let mut render_context = RenderContext::new();
         render_context.filename = String::from("(root)");
         render_context.template = template;
