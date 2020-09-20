@@ -41,6 +41,26 @@ impl Engine {
         None
     }
 
+    fn build_node(&self, build_context: &mut BuildContext, mut parsed_node: Box<dyn Node>, parent_node: &mut Box<dyn Node>) -> Result<(), TemplateError> {
+        match parsed_node.build(&build_context) {
+            NodeBuildResult::EndOfNode(offset) => {
+                build_context.template_remain = build_context.template_remain[offset+1..].to_string();
+                parent_node.add_child(parsed_node);
+                build_context.offset += offset;
+                Ok(())
+            },
+            NodeBuildResult::Error(err) => {
+                return Err(err)
+            },
+            _ => {
+                return Err(TemplateError::create(
+                    build_context.template.clone(),
+                    build_context.offset,
+                    String::from("Rendering results except NodeBuildResult::EndOfNode are not implemented")));
+            }
+        }
+    }
+
     fn build(&self, template: &String) -> Result<Box<dyn Node>, TemplateError> {
         let mut parent_node:Box<dyn Node> = Box::from(ContainerNode::create());
         let mut build_context = BuildContext::new();
@@ -60,24 +80,8 @@ impl Engine {
                     build_context.offset,
                     String::from("Cannot recognize a node")));
             }
-            let mut parsed_node = parsed_node.unwrap();
+            self.build_node(&mut build_context, parsed_node.unwrap(), &mut parent_node)?;
 
-            match parsed_node.build(&build_context) {
-                NodeBuildResult::EndOfNode(offset) => {
-                    build_context.template_remain = build_context.template_remain[offset+1..].to_string();
-                    parent_node.add_child(parsed_node);
-                    build_context.offset += offset;
-                },
-                NodeBuildResult::Error(err) => {
-                    return Err(err)
-                },
-                _ => {
-                    return Err(TemplateError::create(
-                        template.clone(),
-                        build_context.offset,
-                        String::from("Rendering results except NodeBuildResult::EndOfNode are not implemented")));
-                }
-            }
         }
         Ok(parent_node)
     } 
