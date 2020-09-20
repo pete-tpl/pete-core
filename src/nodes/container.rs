@@ -1,6 +1,7 @@
+use crate::context::build_context::BuildContext;
+use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
 use crate::nodes::{BaseNode, Node};
-use crate::parameter::ParameterStore;
 
 pub struct ContainerNode {
     base_node: BaseNode,
@@ -20,22 +21,14 @@ impl Node for ContainerNode {
         self.base_node.children.push(child);
     }
 
-    fn build(&mut self, _template: &String, _offset: usize) -> NodeBuildResult {
+    fn build(&mut self, _context: &BuildContext) -> NodeBuildResult {
         NodeBuildResult::NestedNode(0)
     }
 
-    fn render(&self, parameters: &ParameterStore) -> RenderResult {
+    fn render(&self, context: &RenderContext) -> RenderResult {
         let mut result = String::new();
         for child in &self.base_node.children {
-            match child.render(parameters) {
-                RenderResult::Ok(r) => {
-                    result += r.as_str();
-                },
-                RenderResult::TemplateError(e) => {
-                    return RenderResult::TemplateError(e);
-                }
-            }
-            
+            result += child.render(&context)?.as_str();
         }
 
         RenderResult::Ok(result)

@@ -1,6 +1,7 @@
+use crate::context::build_context::BuildContext;
+use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
 use crate::nodes::{BaseNode, Node};
-use crate::parameter::ParameterStore;
 
 pub struct StaticNode {
     base_node: BaseNode,
@@ -29,22 +30,22 @@ impl Node for StaticNode {
         panic!("Cannot add a child to static node");
     }
 
-    fn build(&mut self, template: &String, offset: usize) -> NodeBuildResult {
-        let mut end_pos = template.find("{#");
+    fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
+        let mut end_pos = context.template_remain.find("{#");
         if end_pos.is_none() {
-            end_pos = template.find("{%");
+            end_pos = context.template_remain.find("{%");
         }
         if end_pos.is_none() {
-            end_pos = template.find("{{");
+            end_pos = context.template_remain.find("{{");
         }
-        let end_pos = (if end_pos.is_none() { template.len() } else { end_pos.unwrap() }) - 1;
-        self.base_node.end_offset = offset + end_pos;
-        self.content = template[0..end_pos+1].to_string();
-        self.base_node.start_offset = offset;
+        let end_pos = (if end_pos.is_none() { context.template_remain.len() } else { end_pos.unwrap() }) - 1;
+        self.base_node.end_offset = context.offset + end_pos;
+        self.content = context.template_remain[0..end_pos+1].to_string();
+        self.base_node.start_offset = context.offset;
         NodeBuildResult::EndOfNode(end_pos)
     }
 
-    fn render(&self, _parameters: &ParameterStore) -> RenderResult {
+    fn render(&self, _context: &RenderContext) -> RenderResult {
         RenderResult::Ok(self.content.clone())
     }
 }
@@ -56,18 +57,20 @@ mod tests {
     #[test]
     fn test_nodes_static_render_static_only() {
         let mut node = StaticNode::create();
-        let result = node.build(&String::from("Hello, World!"), 0);
+        let mut context = BuildContext::new();
+        context.template_remain = String::from("Hello, World!");
+        let result = node.build(&context);
         match result {
             NodeBuildResult::EndOfNode(offset) => {
                 assert_eq!(offset, 12);
             },
             _ => panic!("Failed to build a node")
         }
-        match node.render(&ParameterStore::new()) {
-            RenderResult::Ok(string) => {
+        match node.render(&RenderContext::new()) {
+            Ok(string) => {
                 assert_eq!(String::from("Hello, World!"), string);
             },
-            RenderResult::TemplateError(e) => panic!("Expected to render a node, but got an error: {}", e)
+            Err(e) => panic!("Expected to render a node, but got an error: {}", e)
         }
     }
 

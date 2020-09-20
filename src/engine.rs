@@ -1,6 +1,8 @@
 use crate::error::template_error::TemplateError;
-use crate::parameter::ParameterStore;
 
+use crate::parameter::ParameterStore;
+use crate::context::build_context::BuildContext;
+use crate::context::render_context::RenderContext;
 use crate::nodes::Node;
 use crate::nodes::NodeCreator;
 use crate::nodes::container::ContainerNode;
@@ -20,10 +22,7 @@ pub enum NodeBuildResult {
     Error(TemplateError),
 }
 
-pub enum RenderResult {
-    Ok(String),
-    TemplateError(TemplateError)
-}
+pub type RenderResult = Result<String, TemplateError>;
 
 impl Engine {
     pub fn new() -> Engine {
@@ -32,47 +31,59 @@ impl Engine {
         }
     }
 
+    fn parse_node(&self, build_context: &BuildContext) -> Option<Box<dyn Node>> {
+        for node_creator in NODE_CREATORS.iter() {
+            let parsed_node = node_creator(&build_context.template_remain);
+            if parsed_node.is_some() {
+                return parsed_node;
+            }
+        }
+        None
+    }
+
     pub fn render(&self, template: String, parameters: ParameterStore) -> RenderResult {
-        let mut cursor = 0;
         let mut parent_node:Box<dyn Node> = Box::from(ContainerNode::create());
-        let mut template_remain = template.clone();
-        let mut prev_template_remain_len = template_remain.len()+1;
-        while template_remain.len() > 0 {
-            if template_remain.len() >= prev_template_remain_len {
+        let mut build_context = BuildContext::new();
+        build_context.template = template.clone();
+        build_context.template_remain = template.clone();
+        let mut prev_template_remain_len = build_context.template_remain.len()+1;
+        while build_context.template_remain.len() > 0 {
+            if build_context.template_remain.len() >= prev_template_remain_len {
                 panic!("An infinite loop detected.")
             }
-            prev_template_remain_len = template_remain.len();
-            let mut parsed_node: Option<Box<dyn Node>> = None;
-            for node_creator in NODE_CREATORS.iter() {
-                parsed_node = node_creator(&template_remain);
-                if parsed_node.is_some() {
-                    break;
-                }
-            }
+            prev_template_remain_len = build_context.template_remain.len();
 
+            let parsed_node = self.parse_node(&build_context);
             if parsed_node.is_none() {
-                return RenderResult::TemplateError(TemplateError::create("Cannot recognize a node".to_string(), template.clone(), cursor));
+                return Err(TemplateError::create(
+                    template.clone(),
+                    build_context.offset,
+                    String::from("Cannot recognize a node")));
             }
-
             let mut parsed_node = parsed_node.unwrap();
-            match parsed_node.build(&template_remain, cursor) {
+
+            match parsed_node.build(&build_context) {
                 NodeBuildResult::EndOfNode(offset) => {
-                    template_remain = template_remain[offset+1..].to_string();
+                    build_context.template_remain = build_context.template_remain[offset+1..].to_string();
                     parent_node.add_child(parsed_node);
-                    cursor += offset;
+                    build_context.offset += offset;
                 },
                 NodeBuildResult::Error(err) => {
-                    return RenderResult::TemplateError(err)
+                    return Err(err)
                 },
                 _ => {
-                    return RenderResult::TemplateError(TemplateError::create(
-                        "Rendering results except NodeBuildResult::EndOfNode are not implemented".to_string(),
+                    return Err(TemplateError::create(
                         template.clone(),
-                        cursor));
+                        build_context.offset,
+                        String::from("Rendering results except NodeBuildResult::EndOfNode are not implemented")));
                 }
             }
         }
-        parent_node.render(&parameters)
+        let mut render_context = RenderContext::new();
+        render_context.filename = String::from("(root)");
+        render_context.template = template;
+        render_context.parameters = parameters;
+        parent_node.render(&render_context)
     }
 }
 
@@ -85,8 +96,8 @@ mod tests {
         let engine = Engine::new();
         let result = engine.render(String::from("Hello, World!"), ParameterStore::new());
         match result {
-            RenderResult::TemplateError(_) => { panic!("Failed to render a template") },
-            RenderResult::Ok(result) => {
+            Err(e) => { panic!("Failed to render a template: {}", e) },
+            Ok(result) => {
                 assert_eq!(result, "Hello, World!");
             }
         }
@@ -95,10 +106,12 @@ mod tests {
     #[test]
     fn test_engine_render_static_and_comment() {
         let engine = Engine::new();
-        let result = engine.render(String::from("Hello, World!{# Some comment here #} Nice to meet you."), ParameterStore::new());
+        let result = engine.render(
+            String::from("Hello, World!{# Some comment here #} Nice to meet you."),
+            ParameterStore::new());
         match result {
-            RenderResult::TemplateError(_) => { panic!("Failed to render a template") },
-            RenderResult::Ok(result) => {
+            Err(e) => { panic!("Failed to render a template: {}", e) },
+            Ok(result) => {
                 assert_eq!(result, "Hello, World! Nice to meet you.");
             }
         }
@@ -107,12 +120,14 @@ mod tests {
     #[test]
     fn test_engine_render_static_and_unknown_tag() {
         let engine = Engine::new();
-        let result = engine.render(String::from("Hello, World!{% unknown %}unkn0wn{% endunknown %}Nice to meet you."), ParameterStore::new());
+        let result = engine.render(
+            String::from("Hello, World!{% unknown %}unkn0wn{% endunknown %}Nice to meet you."),
+            ParameterStore::new());
         match result {
-            RenderResult::TemplateError(e) => {
+            Err(e) => {
                 assert_eq!(e.message, "Cannot recognize a node");
             },
-            RenderResult::Ok(_) => {
+            Ok(_) => {
                 panic!("Rendering must have failed.");
             }
         }

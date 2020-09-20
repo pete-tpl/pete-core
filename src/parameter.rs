@@ -70,4 +70,27 @@ impl Parameter {
             }
         }
     }
+
+    pub fn clone(&self) -> Parameter {
+        let mut dest = Parameter::new();
+        unsafe {
+            match self.param_type {
+                ParameterType::Boolean => { dest.set_boolean_value(self.value.boolean_value); },
+                ParameterType::Float => { dest.set_float_value(self.value.float_value); },
+                ParameterType::Int => { dest.set_int_value(self.value.int_value); },
+                ParameterType::StringType => { dest.set_string_value(self.string_value.clone()); },
+                ParameterType::Struct => { dest.set_struct_value(clone_parameter_store(&self.struct_value)); }
+            }
+    
+        }
+        dest
+    }
+}
+
+fn clone_parameter_store(src: &ParameterStore) -> ParameterStore {
+    let mut dest = ParameterStore::new();
+    for (k, v) in src.iter() {
+        dest.insert(k.to_string(), v.clone());
+    }
+    dest
 }

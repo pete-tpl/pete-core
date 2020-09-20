@@ -8,34 +8,15 @@ pub struct TemplateError {
 }
 
 impl TemplateError {
-    pub fn create(message: String, template: String, offset: usize) -> TemplateError {
+    pub fn create(template: String, offset: usize, message: String) -> TemplateError {
         TemplateError{
-            message: message.clone(),
+            message: message,
             offset: offset,
-            template: template.clone(),
+            template: template,
         }
     }
-}
 
-impl fmt::Debug for TemplateError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "An error occurred: {} at position {}",
-            self.message,
-            self.offset
-        )
-    }
-}
-
-impl Error for TemplateError {
-    fn description(&self) -> &str {
-        self.message.as_str()
-    }
-}
-
-impl fmt::Display for TemplateError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn get_line_number_and_offset(&self) -> (usize, usize) {
         let mut template_remain = self.template.clone();
         let mut abs_offset = 0;
         let mut line_nr = 1;
@@ -56,6 +37,26 @@ impl fmt::Display for TemplateError {
             abs_offset += pos + if template_remain.len() > 0 { 1 } else {0}; // consider the linebreak char
         }
         let line_offset = self.offset - abs_offset;
+        (line_nr, line_offset)
+    }
+}
+
+impl fmt::Debug for TemplateError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (line_nr, line_offset) = self.get_line_number_and_offset();
+        write!(f,"An error ocurred at line {}, position {}: {}", line_nr, line_offset, self.message.clone())
+    }
+}
+
+impl Error for TemplateError {
+    fn description(&self) -> &str {
+        self.message.as_str()
+    }
+}
+
+impl fmt::Display for TemplateError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let (line_nr, line_offset) = self.get_line_number_and_offset();
         write!(f,"An error ocurred at line {}, position {}: {}", line_nr, line_offset, self.message.clone())
     }
 }
@@ -63,7 +64,7 @@ impl fmt::Display for TemplateError {
 
 impl From<std::io::Error> for TemplateError {
     fn from(err: std::io::Error) -> TemplateError {
-        TemplateError::create(err.to_string(), String::new(), 0)
+        TemplateError::create(String::new(), 0, err.to_string()) // Is it needed?
     }
 }
 
@@ -73,15 +74,17 @@ mod tests {
 
     #[test]
     fn test_error_template_error() {
-        let error = TemplateError::create(String::from("Unknown tag"),
+        let error = TemplateError::create(
             String::from("hello,\nworld!\nhere is {%test%} a tag"),
-            22);
+            22,
+            String::from("Unknown tag"));
         let message = format!("{}", error);
         assert_eq!(message, "An error ocurred at line 3, position 8: Unknown tag");
 
-        let error = TemplateError::create(String::from("Comment is not closed"),
+        let error = TemplateError::create(
             String::from("hello, world {#commen"),
-            13);
+            13,
+            String::from("Comment is not closed"));
         let message = format!("{}", error);
         assert_eq!(message, "An error ocurred at line 1, position 13: Comment is not closed");
     }
