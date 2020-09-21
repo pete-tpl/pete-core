@@ -46,7 +46,15 @@ impl Node for StaticNode {
     }
 
     fn render(&self, _context: &RenderContext) -> RenderResult {
-        RenderResult::Ok(self.content.clone())
+        return Result::Ok(self.content.clone())
+    }
+
+    fn has_nolinebreak_end(&self) -> bool {
+        self.base_node.has_nolinebreak_end
+    }
+
+    fn has_nolinebreak_beginning(&self) -> bool {
+        self.base_node.has_nolinebreak_beginning
     }
 }
 

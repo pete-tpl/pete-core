@@ -50,6 +50,14 @@ impl Node for CommentNode {
     fn render(&self, _context: &RenderContext) -> RenderResult {
         RenderResult::Ok(String::new())
     }
+
+    fn has_nolinebreak_end(&self) -> bool {
+        self.base_node.has_nolinebreak_end
+    }
+
+    fn has_nolinebreak_beginning(&self) -> bool {
+        self.base_node.has_nolinebreak_beginning
+    }
 }
 
 #[cfg(test)]

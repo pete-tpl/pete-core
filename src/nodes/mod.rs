@@ -10,6 +10,9 @@ pub trait Node {
     fn add_child(&mut self, child: Box<dyn Node>);
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult;
     fn render(&self, context: &RenderContext) -> RenderResult;
+
+    fn has_nolinebreak_end(&self) -> bool;
+    fn has_nolinebreak_beginning(&self) -> bool;
 }
 
 pub struct BaseNode {

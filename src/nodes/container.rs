@@ -27,10 +27,35 @@ impl Node for ContainerNode {
 
     fn render(&self, context: &RenderContext) -> RenderResult {
         let mut result = String::new();
+        let mut previous_no_linebreak_end = false;
         for child in &self.base_node.children {
-            result += child.render(&context)?.as_str();
+            let mut child_render_result = child.render(&context)?;
+            // Remove a linebreak from beginning of current node if the previous node has a nolinebreak at the end
+            if previous_no_linebreak_end {
+                child_render_result = match child_render_result.strip_prefix("\n") {
+                    Some(r) => String::from(r),
+                    None => child_render_result
+                };
+            }
+            // Remove a linebreak from end of currently rendered result if current node has nolinebreak at the beginning
+            if child.has_nolinebreak_beginning() {
+                result = match result.strip_suffix("\n") {
+                    Some(r) => String::from(r),
+                    None => result
+                };
+            }
+            result += child_render_result.as_str();
+            previous_no_linebreak_end = child.has_nolinebreak_end();
         }
 
         RenderResult::Ok(result)
+    }
+
+    fn has_nolinebreak_end(&self) -> bool {
+        self.base_node.has_nolinebreak_end
+    }
+
+    fn has_nolinebreak_beginning(&self) -> bool {
+        self.base_node.has_nolinebreak_beginning
     }
 }

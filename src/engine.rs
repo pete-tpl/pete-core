@@ -140,6 +140,75 @@ mod tests {
                 panic!("Rendering must have failed.");
             }
         }
-        
+    }
+
+    #[test]
+    fn test_engine_render_no_line_breaks_no_start_no_end() {
+        let engine = Engine::new();
+        let result = engine.render(
+            String::from("Hello, World!\n{# comment #}\nNice to meet you"),
+            ParameterStore::new());
+        match result {
+            Err(e) => { panic!("Failed to render a template: {}", e) },
+            Ok(result) => {
+                assert_eq!(result, "Hello, World!\n\nNice to meet you");
+            }
+        }
+    }
+
+    #[test]
+    fn test_engine_render_no_line_breaks_start_no_end() {
+        let engine = Engine::new();
+        let result = engine.render(
+            String::from("Hello, World!\n{#- comment #}\nNice to meet you"),
+            ParameterStore::new());
+        match result {
+            Err(e) => { panic!("Failed to render a template: {}", e) },
+            Ok(result) => {
+                assert_eq!(result, "Hello, World!\nNice to meet you");
+            }
+        }
+    }
+
+    #[test]
+    fn test_engine_render_no_line_breaks_no_start_end() {
+        let engine = Engine::new();
+        let result = engine.render(
+            String::from("Hello, World!\n{# comment -#}\nNice to meet you"),
+            ParameterStore::new());
+        match result {
+            Err(e) => { panic!("Failed to render a template: {}", e) },
+            Ok(result) => {
+                assert_eq!(result, "Hello, World!\nNice to meet you");
+            }
+        }
+    }
+
+    #[test]
+    fn test_engine_render_no_line_breaks_start_end() {
+        let engine = Engine::new();
+        let result = engine.render(
+            String::from("Hello, World!\n{#- comment -#}\nNice to meet you"),
+            ParameterStore::new());
+        match result {
+            Err(e) => { panic!("Failed to render a template: {}", e) },
+            Ok(result) => {
+                assert_eq!(result, "Hello, World!Nice to meet you");
+            }
+        }
+    }
+
+    #[test]
+    fn test_engine_render_no_line_breaks_only_once() {
+        let engine = Engine::new();
+        let result = engine.render(
+            String::from("Hello, World!\n\n{#- comment -#}\n\nNice to meet you"),
+            ParameterStore::new());
+        match result {
+            Err(e) => { panic!("Failed to render a template: {}", e) },
+            Ok(result) => {
+                assert_eq!(result, "Hello, World!\n\nNice to meet you");
+            }
+        }
     }
 }
