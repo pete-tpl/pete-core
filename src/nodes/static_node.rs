@@ -63,6 +63,19 @@ mod tests {
     use super::*;
 
     #[test]
+    fn test_nodes_static_try_create_success() {
+        let node = StaticNode::try_create_from_template(&String::from("the rest{# a comment #}"));
+        assert_eq!(node.is_some(), true);
+    }
+
+    #[test]
+    fn test_nodes_static_try_create_failure() {
+        let node = StaticNode::try_create_from_template(&String::from("{# a comment #}\nthe rest"));
+        assert_eq!(node.is_none(), true);
+    }
+
+
+    #[test]
     fn test_nodes_static_render_static_only() {
         let mut node = StaticNode::create();
         let mut context = BuildContext::new();
