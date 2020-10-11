@@ -2,7 +2,7 @@ use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
 use crate::error::template_error::TemplateError;
-use crate::nodes::{BaseNode, Node};
+use crate::nodes::{BaseNode, Node, COMMENT_START, COMMENT_END};
 
 pub struct CommentNode {
     base_node: BaseNode,
@@ -16,7 +16,7 @@ impl CommentNode {
     }
 
     pub fn try_create_from_template(template: &String) -> Option<Box<dyn Node>> {
-        if template.starts_with("{#") {
+        if template.starts_with(COMMENT_START) {
             Some(Box::from(CommentNode::create()))
         } else {
             None
@@ -31,14 +31,14 @@ impl Node for CommentNode {
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
         self.base_node.has_nolinebreak_beginning = context.template_remain[2..3].to_string() == "-";
-        let end_pos = context.template_remain.find("#}");
+        let end_pos = context.template_remain.find(COMMENT_END);
         match end_pos {
             None => NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
                 context.offset,
                 String::from("Comment is not closed"))),
             Some(end_pos) => {
-                let end_pos_with_tag = end_pos - 1 + "#}".len();
+                let end_pos_with_tag = end_pos - 1 + COMMENT_END.len();
                 self.base_node.end_offset = context.offset + end_pos_with_tag;
                 self.base_node.has_nolinebreak_end = context.template_remain[end_pos-1..end_pos].to_string() == "-";
                 self.base_node.start_offset = context.offset;

@@ -1,7 +1,7 @@
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
-use crate::nodes::{BaseNode, Node};
+use crate::nodes::{BaseNode, Node, COMMENT_START, EXPRESSION_START, TAG_START};
 
 pub struct StaticNode {
     base_node: BaseNode,
@@ -17,7 +17,7 @@ impl StaticNode {
     }
 
     pub fn try_create_from_template(template: &String) -> Option<Box<dyn Node>> {
-        if template.starts_with("{#") || template.starts_with("{%") || template.starts_with("{{") {
+        if template.starts_with(COMMENT_START) || template.starts_with(TAG_START) || template.starts_with(EXPRESSION_START) {
             None
         } else {
             Some(Box::from(StaticNode::create()))
@@ -31,12 +31,12 @@ impl Node for StaticNode {
     }
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
-        let mut end_pos = context.template_remain.find("{#");
+        let mut end_pos = context.template_remain.find(COMMENT_START);
         if end_pos.is_none() {
-            end_pos = context.template_remain.find("{%");
+            end_pos = context.template_remain.find(TAG_START);
         }
         if end_pos.is_none() {
-            end_pos = context.template_remain.find("{{");
+            end_pos = context.template_remain.find(EXPRESSION_START);
         }
         let end_pos = (if end_pos.is_none() { context.template_remain.len() } else { end_pos.unwrap() }) - 1;
         self.base_node.end_offset = context.offset + end_pos;

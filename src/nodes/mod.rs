@@ -1,10 +1,17 @@
 pub mod container;
 pub mod comment;
+pub mod expression;
 pub mod static_node;
 
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
+
+const EXPRESSION_START: &str = "{{";
+const EXPRESSION_END: &str = "}}";
+const COMMENT_START: &str = "{#";
+const COMMENT_END: &str = "#}";
+const TAG_START: &str = "{%";
 
 pub trait Node {
     fn add_child(&mut self, child: Box<dyn Node>);
