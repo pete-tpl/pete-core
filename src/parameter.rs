@@ -34,6 +34,12 @@ impl Parameter {
         }
     }
 
+    pub fn new_from_string(string: String) -> Parameter {
+        let mut p = Parameter::new();
+        p.set_string_value(string);
+        p
+    }
+
     pub fn set_boolean_value(&mut self, value: bool) {
         self.param_type = ParameterType::Boolean;
         self.value = Value { boolean_value: value };

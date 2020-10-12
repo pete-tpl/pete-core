@@ -2,17 +2,21 @@ use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
 use crate::error::template_error::TemplateError;
+use crate::expressions as expressions_mod;
 use crate::nodes::{BaseNode, Node, EXPRESSION_START, EXPRESSION_END};
+use crate::parameter::Parameter;
 
 
 pub struct ExpressionNode {
     base_node: BaseNode,
+    expression_node: Box<dyn expressions_mod::Node>,
 }
 
 impl ExpressionNode {
     fn create() -> ExpressionNode {
         ExpressionNode {
             base_node: BaseNode::new(),
+            expression_node: Box::new(expressions_mod::Literal::new(Parameter::new_from_string(String::new()))),
         }
     }
 
