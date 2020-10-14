@@ -12,4 +12,12 @@ impl BuildContext {
             template_remain: String::new(),
         }
     }
+
+    pub fn clone(&self) -> BuildContext {
+        BuildContext {
+            offset: self.offset,
+            template: self.template.clone(),
+            template_remain: self.template.clone(),
+        }
+    }
 }

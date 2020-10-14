@@ -40,6 +40,12 @@ impl Parameter {
         p
     }
 
+    pub fn new_from_str(string: &str) -> Parameter {
+        let mut p = Parameter::new();
+        p.set_string_value(String::from(string));
+        p
+    }
+
     pub fn set_boolean_value(&mut self, value: bool) {
         self.param_type = ParameterType::Boolean;
         self.value = Value { boolean_value: value };
@@ -90,6 +96,10 @@ impl Parameter {
     
         }
         dest
+    }
+
+    pub fn as_string(&self) -> String {
+        self.get_string_value()
     }
 }
 

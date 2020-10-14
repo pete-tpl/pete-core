@@ -7,10 +7,12 @@ use crate::nodes::Node;
 use crate::nodes::NodeCreator;
 use crate::nodes::container::ContainerNode;
 use crate::nodes::comment::CommentNode;
+use crate::nodes::expression::ExpressionNode;
 use crate::nodes::static_node::StaticNode;
 
-const NODE_CREATORS: [NodeCreator; 2] = [
+const NODE_CREATORS: [NodeCreator; 3] = [
     CommentNode::try_create_from_template,
+    ExpressionNode::try_create_from_template,
     StaticNode::try_create_from_template,
 ];
 

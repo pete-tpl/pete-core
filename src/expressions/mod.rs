@@ -1,38 +1,11 @@
-use crate::parameter::Parameter;
-use crate::context::render_context::RenderContext;
+use crate::expressions::errors::parsing_error::ParsingError;
+use crate::expressions::nodes::Node;
+use crate::expressions::nodes::literal::Literal;
 
-pub trait Node {
-    fn render(&self, context: &RenderContext) -> Literal;
-}
+pub mod errors;
+pub mod functions;
+pub mod nodes;
 
-struct BaseNode {
-    children: Vec<Box<dyn Node>>,
-}
-
-impl BaseNode {
-    fn new() -> BaseNode {
-        BaseNode {
-            children: Vec::new(),
-        }
-    }
-}
-
-pub struct Literal {
-    base_node: BaseNode,
-    value: Parameter,
-}
-
-impl Literal {
-    pub fn new(value: Parameter) -> Literal {
-        Literal {
-            base_node: BaseNode::new(),
-            value: value,
-        }
-    }
-}
-
-impl Node for Literal {
-    fn render(&self, _context: &RenderContext) -> Literal {
-        Literal::new(self.value.clone())
-    }
+pub fn parse(_string: String) -> Result<Box<dyn Node>, ParsingError> {
+    Ok(Box::new(Literal::new_from_str("")))
 }

@@ -2,21 +2,22 @@ use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
 use crate::error::template_error::TemplateError;
-use crate::expressions as expressions_mod;
+use crate::expressions::nodes as expression_nodes;
+use crate::expressions::nodes::literal::Literal;
 use crate::nodes::{BaseNode, Node, EXPRESSION_START, EXPRESSION_END};
-use crate::parameter::Parameter;
-
 
 pub struct ExpressionNode {
     base_node: BaseNode,
-    expression_node: Box<dyn expressions_mod::Node>,
+    build_context: BuildContext,
+    expression_node: Box<dyn expression_nodes::Node>,
 }
 
 impl ExpressionNode {
     fn create() -> ExpressionNode {
         ExpressionNode {
             base_node: BaseNode::new(),
-            expression_node: Box::new(expressions_mod::Literal::new(Parameter::new_from_string(String::new()))),
+            build_context: BuildContext::new(),
+            expression_node: Box::new(Literal::new_from_str("")),
         }
     }
 
@@ -36,6 +37,7 @@ impl Node for ExpressionNode {
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
         self.base_node.has_nolinebreak_beginning = context.template_remain[2..3].to_string() == "-";
+        self.build_context = context.clone();
         let end_pos = context.template_remain.find(EXPRESSION_END);
         match end_pos {
             None => NodeBuildResult::Error(TemplateError::create(
@@ -52,8 +54,16 @@ impl Node for ExpressionNode {
         }
     }
 
-    fn render(&self, _context: &RenderContext) -> RenderResult {
-        Result::Ok(String::new())
+    fn render(&self, context: &RenderContext) -> RenderResult {
+        match self.expression_node.evaluate(&context) {
+            Ok(parameter) => RenderResult::Ok(parameter.as_string()),
+            Err(err) => RenderResult::Err(TemplateError::create(
+                self.build_context.template.clone(),
+                self.build_context.offset,
+                String::from(format!("Failed to evaluate an expression: {}", err.message))
+            )),
+        }
+        
     }
 
     fn has_nolinebreak_end(&self) -> bool {
