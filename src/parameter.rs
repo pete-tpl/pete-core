@@ -46,6 +46,13 @@ impl Parameter {
         p
     }
 
+    pub fn new_from_int(value: i128) -> Parameter {
+        let mut p = Parameter::new();
+        p.set_int_value(value);
+        p
+    }
+
+
     pub fn set_boolean_value(&mut self, value: bool) {
         self.param_type = ParameterType::Boolean;
         self.value = Value { boolean_value: value };
@@ -79,6 +86,15 @@ impl Parameter {
                 ParameterType::Int => self.value.int_value.to_string(),
                 ParameterType::StringType => self.string_value.clone(),
                 ParameterType::Struct => String::new() // TODO: implement
+            }
+        }
+    }
+
+    pub fn get_int_value(&self) -> Option<i128> {
+        unsafe {
+            match self.param_type {
+                ParameterType::Int => Some(self.value.int_value),
+                _ => None,
             }
         }
     }
