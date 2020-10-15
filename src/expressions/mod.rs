@@ -26,7 +26,6 @@ pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
             break;
         }
         let c = c.unwrap();
-        println!("TEST: {}", c);
         if c.is_digit(10) {
             match mode {
                 ParseMode::Undefined => {
