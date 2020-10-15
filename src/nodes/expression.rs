@@ -50,7 +50,7 @@ impl Node for ExpressionNode {
                 self.base_node.end_offset = context.offset + end_pos_with_tag;
                 self.base_node.has_nolinebreak_end = context.template_remain[end_pos-1..end_pos].to_string() == "-";
                 self.base_node.start_offset = context.offset;
-                let expression_string = context.template_remain[0..end_pos+1].to_string();
+                let expression_string = context.template_remain[EXPRESSION_START.len()..end_pos].to_string();
                 match expression_mod::parse(expression_string) {
                     Ok(expr_node) => {
                         self.expression_node = expr_node;
