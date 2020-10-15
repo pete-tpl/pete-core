@@ -2,6 +2,7 @@ use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
 use crate::error::template_error::TemplateError;
+use crate::expressions as expression_mod;
 use crate::expressions::nodes as expression_nodes;
 use crate::expressions::nodes::literal::Literal;
 use crate::nodes::{BaseNode, Node, EXPRESSION_START, EXPRESSION_END};
@@ -49,6 +50,19 @@ impl Node for ExpressionNode {
                 self.base_node.end_offset = context.offset + end_pos_with_tag;
                 self.base_node.has_nolinebreak_end = context.template_remain[end_pos-1..end_pos].to_string() == "-";
                 self.base_node.start_offset = context.offset;
+                let expression_string = context.template_remain[0..end_pos+1].to_string();
+                match expression_mod::parse(expression_string) {
+                    Ok(expr_node) => {
+                        self.expression_node = expr_node;
+                    },
+                    Err(err) => {
+                        return NodeBuildResult::Error(TemplateError::create(
+                            self.build_context.template.clone(),
+                            self.build_context.offset,
+                            String::from(format!("Failed to evaluate an expression: {}", err.message))
+                        ));
+                    }
+                };
                 NodeBuildResult::EndOfNode(end_pos_with_tag)
             }
         }
