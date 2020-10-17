@@ -1,85 +1,49 @@
 use crate::expressions::errors::parsing_error::ParsingError;
-use crate::expressions::nodes::Node;
-use crate::expressions::nodes::literal::Literal;
+use crate::expressions::nodes::{Node, NodeCreator, NodeCreateResult};
+use crate::expressions::nodes::literal;
 
 pub mod errors;
 pub mod functions;
 pub mod nodes;
 
-enum ParseMode {
-    Undefined,
-    StringLiteral,
-    NumericLiteral,
-    
-}
+const NODE_CREATORS: [NodeCreator; 1] = [
+    literal::try_create_from_string,
+];
 
 pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
-    let result = string.trim();
-    let mut mode: ParseMode = ParseMode::Undefined;
-    let mut cursor: usize = 0;
-    let mut pos_start: usize = 0;
-    let string_len = result.len();
-    let mut parent_node: Box<dyn Node> = Box::new(Literal::new_from_str(""));
-    while cursor <= string_len {
-        let c = result.chars().nth(cursor);
-        if c.is_none() {
-            break;
+    let mut string_remain = string.clone();
+    let mut offset: usize = 0;
+    let mut result: Option<Box<dyn Node>> = None;
+    while string_remain.len() > 0 {
+        let starts_with_space = match string_remain.chars().nth(0) {
+            None => false,
+            Some(c) => c == ' ',
+        };
+        if starts_with_space {
+            string_remain = string_remain[1..].to_string();
+            offset += 1;
         }
-        let c = c.unwrap();
-        if c.is_digit(10) {
-            match mode {
-                ParseMode::Undefined => {
-                    mode = ParseMode::NumericLiteral;
-                    pos_start = cursor;
+        for node_creator in &NODE_CREATORS {
+            match node_creator(string_remain.clone(), offset) {
+                NodeCreateResult::Some(r) => {
+                    let (parsed_node, offset_increment) = r;
+                    result = Some(parsed_node);
+                    offset += offset_increment + 1;
+                    string_remain = string_remain[offset_increment+1..].to_string();
                 },
-                ParseMode::NumericLiteral => {},
-                _ => {},
-            }
-        } else if c == '"' {
-            match mode {
-                ParseMode::Undefined => {
-                    mode = ParseMode::StringLiteral;
-                    pos_start = cursor + 1;
+                NodeCreateResult::Err(e) => {
+                    return Err(ParsingError::new(offset, format!("An error occurred on parsing the expresion: {}", e)));
                 },
-                ParseMode::StringLiteral => {
-                    mode = ParseMode::Undefined;
-                    parent_node = Box::new(Literal::new_from_str(result[pos_start..cursor].as_ref()))
-                }
-                _ => {}
-            }
-        } else {
-            match mode {
-                ParseMode::NumericLiteral => {
-                    let number = result[pos_start..cursor].to_string();
-                    parent_node = convert_to_literal(number, cursor)?;
-                },
-                ParseMode::StringLiteral => {},
-                _ => {
-                    return Err(ParsingError::new(cursor, format!("Unexpected char: {}", c)));
-                }
+                NodeCreateResult::None => {}, // proceed with iteration over node creators
             }
         }
-        cursor += 1;
+        if result.is_none() {
+            return Err(ParsingError::new(offset, format!("Cannot parse the part of expression: \"{}\"", string_remain)));
+        }
     }
-    match mode {
-        ParseMode::NumericLiteral => {
-            let number = result[pos_start..cursor].to_string();
-            parent_node = convert_to_literal(number, cursor)?;
-        },
-        ParseMode::StringLiteral => {
-            return Err(ParsingError::new(pos_start, format!("String is not closed")))
-        },
-        _ => {}
-    }
-
-
-    Ok(parent_node)
-}
-
-fn convert_to_literal(string: String, cursor: usize) -> Result<Box<Literal>, ParsingError> {
-    match string.parse::<i32>() {
-        Ok(n) => Ok(Box::new(Literal::new_from_int(n.into()))),
-        Err(e) => Err(ParsingError::new(cursor, format!("Cannot convert char \"{}\" to integer: {}", cursor, e))),
+    match result {
+        Some(r) => Ok(r),
+        None => Err(ParsingError::new(0, format!("Failed to parse an expression: \"{}\"", string)))
     }
 }
 
