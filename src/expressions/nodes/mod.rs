@@ -1,4 +1,5 @@
 pub mod literal;
+pub mod variable;
 
 use crate::context::render_context::RenderContext;
 use crate::expressions::errors::evaluation_error::EvaluationError;

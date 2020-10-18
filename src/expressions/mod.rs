@@ -1,13 +1,15 @@
 use crate::expressions::errors::parsing_error::ParsingError;
 use crate::expressions::nodes::{Node, NodeCreator, NodeCreateResult};
 use crate::expressions::nodes::literal;
+use crate::expressions::nodes::variable;
 
 pub mod errors;
 pub mod functions;
 pub mod nodes;
 
-const NODE_CREATORS: [NodeCreator; 1] = [
+const NODE_CREATORS: [NodeCreator; 2] = [
     literal::try_create_from_string,
+    variable::try_create_from_string,
 ];
 
 pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
