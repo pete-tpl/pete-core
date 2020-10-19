@@ -1,6 +1,6 @@
 use crate::context::render_context::RenderContext;
 use crate::expressions::errors::evaluation_error::EvaluationError;
-use crate::expressions::nodes::{Node, NodeCreateResult};
+use crate::expressions::nodes::{BinaryOperands, Node, NodeCreateResult};
 use crate::parameter::Parameter;
 
 //// A variable from context
@@ -58,6 +58,14 @@ impl Node for Variable {
             Some(p) => Ok(p.clone()),
             None => Err(EvaluationError::new(format!("Parameter not found: {}", self.variable_name)))
         }
+    }
+
+    fn is_operator(&self) -> bool {
+        false
+    }
+
+    fn set_binary_operands(&mut self, _operands: BinaryOperands) {
+        
     }
 }
 

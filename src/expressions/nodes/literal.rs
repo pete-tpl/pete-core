@@ -1,5 +1,5 @@
 use crate::context::render_context::RenderContext;
-use crate::expressions::nodes::{Node, NodeCreateResult};
+use crate::expressions::nodes::{BinaryOperands, Node, NodeCreateResult};
 use crate::expressions::errors::evaluation_error::EvaluationError;
 use crate::expressions::errors::parsing_error::ParsingError;
 use crate::parameter::Parameter;
@@ -74,5 +74,13 @@ fn try_create_string_literal(expression: String, offset: usize) -> NodeCreateRes
 impl Node for Literal {
     fn evaluate(&self, _context: &RenderContext) -> Result<Parameter, EvaluationError> {
         Ok(self.value.clone())
+    }
+
+    fn is_operator(&self) -> bool {
+        false
+    }
+
+    fn set_binary_operands(&mut self, _operands: BinaryOperands) {
+
     }
 }

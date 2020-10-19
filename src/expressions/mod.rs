@@ -1,22 +1,29 @@
 use crate::expressions::errors::parsing_error::ParsingError;
 use crate::expressions::nodes::{Node, NodeCreator, NodeCreateResult};
 use crate::expressions::nodes::literal;
+use crate::expressions::nodes::sum;
 use crate::expressions::nodes::variable;
 
 pub mod errors;
 pub mod functions;
 pub mod nodes;
 
-const NODE_CREATORS: [NodeCreator; 2] = [
+const NODE_CREATORS: [NodeCreator; 3] = [
     literal::try_create_from_string,
+    sum::try_create_from_string,
     variable::try_create_from_string,
 ];
 
 pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
     let mut string_remain = string.clone();
     let mut offset: usize = 0;
-    let mut result: Option<Box<dyn Node>> = None;
+    let mut prev_string_remain_len = string_remain.len() + 1;
+    let mut nodes_stack: Vec<Box<dyn Node>> = Vec::new();
     while string_remain.len() > 0 {
+        if string_remain.len() >= prev_string_remain_len {
+            return Err(ParsingError::new(offset, String::from("An infinite loop detected")));
+        }
+        prev_string_remain_len = string_remain.len();
         let starts_with_space = match string_remain.chars().nth(0) {
             None => false,
             Some(c) => c == ' ',
@@ -24,12 +31,14 @@ pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
         if starts_with_space {
             string_remain = string_remain[1..].to_string();
             offset += 1;
+            continue;
         }
+        let mut result_iteration: Option<Box<dyn Node>> = None;
         for node_creator in &NODE_CREATORS {
             match node_creator(string_remain.clone(), offset) {
                 NodeCreateResult::Some(r) => {
                     let (parsed_node, offset_increment) = r;
-                    result = Some(parsed_node);
+                    result_iteration = Some(parsed_node);
                     offset += offset_increment + 1;
                     string_remain = string_remain[offset_increment+1..].to_string();
                 },
@@ -39,11 +48,25 @@ pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
                 NodeCreateResult::None => {}, // proceed with iteration over node creators
             }
         }
-        if result.is_none() {
-            return Err(ParsingError::new(offset, format!("Cannot parse the part of expression: \"{}\"", string_remain)));
-        }
+        match result_iteration {
+            None => return Err(ParsingError::new(offset, format!("Cannot parse the part of expression: \"{}\"", string_remain))),
+            Some(node) => {
+                let last_node = if !node.is_operator() && nodes_stack.len() >= 2 {
+                    let mut operator = nodes_stack.pop().unwrap();
+                    if !operator.is_operator() {
+                        return Err(ParsingError::new(offset, format!("Expected the previous node to be operator")));
+                    }
+                    let first_operand = nodes_stack.pop();
+                    operator.set_binary_operands([first_operand, Some(node)]);
+                    operator
+                } else {
+                    node
+                };
+                nodes_stack.push(last_node);
+            },
+        };
     }
-    match result {
+    match nodes_stack.pop() {
         Some(r) => Ok(r),
         None => Err(ParsingError::new(0, format!("Failed to parse an expression: \"{}\"", string)))
     }
@@ -79,4 +102,18 @@ mod tests {
         };
         assert_eq!(param.get_int_value(), Some(123));
     }
+
+    #[test]
+    fn test_expressions_parse_sum_of_int() {
+        let literal = match parse(String::from("3 + 2")) {
+            Ok(l) => l,
+            Err(e) => panic!("Expected a literal, got an error: {}", e)
+        };
+        let param = match literal.evaluate(&RenderContext::new()) {
+            Ok(p) => p,
+            Err(e) => panic!("Expected a parameter, got an error: {}", e)
+        };
+        assert_eq!(param.get_int_value(), Some(5));
+    }
+
 }
