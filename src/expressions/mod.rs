@@ -14,6 +14,21 @@ const NODE_CREATORS: [NodeCreator; 3] = [
     variable::try_create_from_string,
 ];
 
+fn get_parsed_node(string_remain: String, offset: usize) -> Result<(Box<dyn Node>, usize), ParsingError> {
+    for node_creator in &NODE_CREATORS {
+        match node_creator(string_remain.clone(), offset) {
+            NodeCreateResult::Some(r) => {
+                return Ok(r);
+            },
+            NodeCreateResult::Err(e) => {
+                return Err(ParsingError::new(offset, format!("An error occurred on parsing the expresion: {}", e)));
+            },
+            NodeCreateResult::None => {}, // proceed with iteration over node creators
+        }
+    }
+    Err(ParsingError::new(offset, format!("Cannot parse the part of expression: \"{}\"", string_remain)))
+}
+
 pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
     let mut string_remain = string.clone();
     let mut offset: usize = 0;
@@ -24,47 +39,35 @@ pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
             return Err(ParsingError::new(offset, String::from("An infinite loop detected")));
         }
         prev_string_remain_len = string_remain.len();
-        let starts_with_space = match string_remain.chars().nth(0) {
-            None => false,
-            Some(c) => c == ' ',
-        };
-        if starts_with_space {
+        if string_remain.starts_with(" ") {
             string_remain = string_remain[1..].to_string();
             offset += 1;
             continue;
         }
-        let mut result_iteration: Option<Box<dyn Node>> = None;
-        for node_creator in &NODE_CREATORS {
-            match node_creator(string_remain.clone(), offset) {
-                NodeCreateResult::Some(r) => {
-                    let (parsed_node, offset_increment) = r;
-                    result_iteration = Some(parsed_node);
-                    offset += offset_increment + 1;
-                    string_remain = string_remain[offset_increment+1..].to_string();
-                },
-                NodeCreateResult::Err(e) => {
-                    return Err(ParsingError::new(offset, format!("An error occurred on parsing the expresion: {}", e)));
-                },
-                NodeCreateResult::None => {}, // proceed with iteration over node creators
-            }
-        }
-        match result_iteration {
-            None => return Err(ParsingError::new(offset, format!("Cannot parse the part of expression: \"{}\"", string_remain))),
-            Some(node) => {
-                let last_node = if !node.is_operator() && nodes_stack.len() >= 2 {
-                    let mut operator = nodes_stack.pop().unwrap();
-                    if !operator.is_operator() {
-                        return Err(ParsingError::new(offset, format!("Expected the previous node to be operator")));
-                    }
-                    let first_operand = nodes_stack.pop();
-                    operator.set_binary_operands([first_operand, Some(node)]);
-                    operator
-                } else {
-                    node
-                };
-                nodes_stack.push(last_node);
+
+        let node = match get_parsed_node(string_remain.clone(), offset) {
+            Ok(r) => {
+                let (parsed_node, offset_increment) = r;
+                offset += offset_increment + 1;
+                string_remain = string_remain[offset_increment+1..].to_string();
+                Ok(parsed_node)
             },
+            Err(e) => Err(e),
+        }?;
+
+        let last_node = if !node.is_operator() && nodes_stack.len() >= 2 {
+            let mut operator = nodes_stack.pop().unwrap();
+            if !operator.is_operator() {
+                return Err(ParsingError::new(offset, format!("Expected the previous node to be operator")));
+            }
+            let first_operand = nodes_stack.pop();
+            operator.set_binary_operands([first_operand, Some(node)]);
+            operator
+        } else {
+            node
         };
+        nodes_stack.push(last_node);
+
     }
     match nodes_stack.pop() {
         Some(r) => Ok(r),
