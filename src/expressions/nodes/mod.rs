@@ -1,4 +1,5 @@
 pub mod literal;
+pub mod subtraction;
 pub mod sum;
 pub mod variable;
 

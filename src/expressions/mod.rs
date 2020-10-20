@@ -2,14 +2,16 @@ use crate::expressions::errors::parsing_error::ParsingError;
 use crate::expressions::nodes::{Node, NodeCreator, NodeCreateResult};
 use crate::expressions::nodes::literal;
 use crate::expressions::nodes::sum;
+use crate::expressions::nodes::subtraction;
 use crate::expressions::nodes::variable;
 
 pub mod errors;
 pub mod functions;
 pub mod nodes;
 
-const NODE_CREATORS: [NodeCreator; 3] = [
+const NODE_CREATORS: [NodeCreator; 4] = [
     literal::try_create_from_string,
+    subtraction::try_create_from_string,
     sum::try_create_from_string,
     variable::try_create_from_string,
 ];

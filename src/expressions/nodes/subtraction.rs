@@ -3,31 +3,31 @@ use crate::expressions::errors::evaluation_error::EvaluationError;
 use crate::expressions::nodes::{BinaryOperands, Node, NodeCreateResult};
 use crate::parameter::Parameter;
 
-//// Arithmetic sum
-pub struct Sum {
+//// Arithmetic subtraction
+pub struct Subtraction {
     operands: BinaryOperands,
 }
 
-impl Sum {
-    fn new() -> Sum {
-        Sum{
+impl Subtraction {
+    fn new() -> Subtraction {
+        Subtraction{
             operands: [None, None],
         }
     }
 }
 
 pub fn try_create_from_string(expression: String, _offset: usize) -> NodeCreateResult {
-    let is_first_char_plus = match expression.chars().nth(0) {
+    let is_first_char_minus = match expression.chars().nth(0) {
         None => false,
-        Some(c) => '+' == c
+        Some(c) => '-' == c
     };
-    match is_first_char_plus {
-        true => NodeCreateResult::Some((Box::new(Sum::new()), 1)),
+    match is_first_char_minus {
+        true => NodeCreateResult::Some((Box::new(Subtraction::new()), 1)),
         false => NodeCreateResult::None,
     }
 }
 
-impl Node for Sum {
+impl Node for Subtraction {
     fn evaluate(&self, context: &RenderContext) -> Result<Parameter, EvaluationError> {
         for (i, operand) in self.operands.iter().enumerate() {
             match operand {
@@ -39,11 +39,11 @@ impl Node for Sum {
         let operand2 = self.operands[1].as_ref().unwrap().evaluate(&context)?;
         let mut result = Parameter::new_from_int(0);
         if operand1.get_int_value().is_some() && operand2.get_int_value().is_some() {
-            result.set_int_value(operand1.get_int_value().unwrap() + operand2.get_int_value().unwrap());
+            result.set_int_value(operand1.get_int_value().unwrap() - operand2.get_int_value().unwrap());
         } else if operand1.get_float_value().is_some() && operand2.get_float_value().is_some() {
-            result.set_float_value(operand1.get_float_value().unwrap() + operand2.get_float_value().unwrap());
+            result.set_float_value(operand1.get_float_value().unwrap() - operand2.get_float_value().unwrap());
         } else {
-            return Err(EvaluationError::new(format!("Unsupported types of operands for sum operator")))
+            return Err(EvaluationError::new(format!("Unsupported types of operands for subtraction operator")))
         }
 
         return Ok(result);
@@ -65,36 +65,36 @@ mod tests {
     use crate::expressions::nodes::literal::Literal;
 
     #[test]
-    fn test_expressions_node_sum_two_ints() {
-        let mut operator = Sum::new();
+    fn test_expressions_node_subtraction_two_ints() {
+        let mut operator = Subtraction::new();
         operator.set_binary_operands([
-            Some(Box::from(Literal::new_from_int(7))),
             Some(Box::from(Literal::new_from_int(42))),
+            Some(Box::from(Literal::new_from_int(7))),
         ]);
         let param = match operator.evaluate(&RenderContext::new()) {
             Ok(p) => p,
             Err(e) => panic!("Expected an integer-type parameter, got an error: {}", e),
         };
-        assert_eq!(param.get_int_value(), Some(49));
+        assert_eq!(param.get_int_value(), Some(35));
     }
 
     #[test]
-    fn test_expressions_node_sum_int_float() {
-        let mut operator = Sum::new();
+    fn test_expressions_node_subtraction_int_float() {
+        let mut operator = Subtraction::new();
         operator.set_binary_operands([
             Some(Box::from(Literal::new_from_int(7))),
-            Some(Box::from(Literal::new_from_float(6.5))),
+            Some(Box::from(Literal::new_from_float(5.5))),
         ]);
         let param = match operator.evaluate(&RenderContext::new()) {
             Ok(p) => p,
             Err(e) => panic!("Expected a float-type parameter, got an error: {}", e),
         };
-        assert_eq!(param.get_float_value(), Some(13.5));
+        assert_eq!(param.get_float_value(), Some(1.5));
     }
 
     #[test]
-    fn test_expressions_node_sum_string_int() {
-        let mut operator = Sum::new();
+    fn test_expressions_node_subtraction_string_int() {
+        let mut operator = Subtraction::new();
         operator.set_binary_operands([
             Some(Box::from(Literal::new_from_str("Hello"))),
             Some(Box::from(Literal::new_from_float(6.5))),
@@ -103,6 +103,6 @@ mod tests {
             Ok(_) => panic!("Expected an error, but got an operator"),
             Err(e) => e,
         };
-        assert_eq!(err.message, "Unsupported types of operands for sum operator");
+        assert_eq!(err.message, "Unsupported types of operands for subtraction operator");
     }
 }
