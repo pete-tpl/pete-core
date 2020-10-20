@@ -1,4 +1,6 @@
+pub mod division;
 pub mod literal;
+pub mod multiplication;
 pub mod subtraction;
 pub mod sum;
 pub mod variable;
