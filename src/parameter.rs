@@ -52,6 +52,11 @@ impl Parameter {
         p
     }
 
+    pub fn new_from_float(value: f64) -> Parameter {
+        let mut p = Parameter::new();
+        p.set_float_value(value);
+        p
+    }
 
     pub fn set_boolean_value(&mut self, value: bool) {
         self.param_type = ParameterType::Boolean;
@@ -94,6 +99,16 @@ impl Parameter {
         unsafe {
             match self.param_type {
                 ParameterType::Int => Some(self.value.int_value),
+                _ => None,
+            }
+        }
+    }
+
+    pub fn get_float_value(&self) -> Option<f64> {
+        unsafe {
+            match self.param_type {
+                ParameterType::Float => Some(self.value.float_value),
+                ParameterType::Int => Some(self.value.int_value as f64),
                 _ => None,
             }
         }

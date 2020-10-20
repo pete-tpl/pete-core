@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn test_expressions_parse_sum_of_int() {
-        let literal = match parse(String::from("3 + 2")) {
+        let literal = match parse(String::from("3 + 2 + 8")) {
             Ok(l) => l,
             Err(e) => panic!("Expected a literal, got an error: {}", e)
         };
@@ -116,7 +116,6 @@ mod tests {
             Ok(p) => p,
             Err(e) => panic!("Expected a parameter, got an error: {}", e)
         };
-        assert_eq!(param.get_int_value(), Some(5));
+        assert_eq!(param.get_int_value(), Some(13));
     }
-
 }

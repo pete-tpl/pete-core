@@ -23,6 +23,10 @@ impl Literal {
     pub fn new_from_int(value: i128) -> Literal {
         Literal::new(Parameter::new_from_int(value))
     }
+
+    pub fn new_from_float(value: f64) -> Literal {
+        Literal::new(Parameter::new_from_float(value))
+    }
 }
 
 pub fn try_create_from_string(expression: String, offset: usize) -> NodeCreateResult {

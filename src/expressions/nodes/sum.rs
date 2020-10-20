@@ -37,8 +37,10 @@ impl Node for Sum {
             }?;
             if sum.get_int_value().is_some() && operand_result_param.get_int_value().is_some() {
                 sum.set_int_value(sum.get_int_value().unwrap() + operand_result_param.get_int_value().unwrap());
+            } else if sum.get_float_value().is_some() && operand_result_param.get_float_value().is_some() {
+                sum.set_float_value(sum.get_float_value().unwrap() + operand_result_param.get_float_value().unwrap());
             } else {
-                return Err(EvaluationError::new(format!("Sum operation is implemented only for integers")))
+                return Err(EvaluationError::new(format!("Unsupported types of operands for sum operator")))
             }
             
         }
@@ -51,5 +53,54 @@ impl Node for Sum {
 
     fn set_binary_operands(&mut self, operands: BinaryOperands) {
         self.operands = operands;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::context::render_context::RenderContext;
+    use crate::expressions::nodes::literal::Literal;
+
+    #[test]
+    fn test_expressions_node_sum_two_ints() {
+        let mut operator = Sum::new();
+        operator.set_binary_operands([
+            Some(Box::from(Literal::new_from_int(7))),
+            Some(Box::from(Literal::new_from_int(42))),
+        ]);
+        let param = match operator.evaluate(&RenderContext::new()) {
+            Ok(p) => p,
+            Err(e) => panic!("Expected an integer-type parameter, got an error: {}", e),
+        };
+        assert_eq!(param.get_int_value(), Some(49));
+    }
+
+    #[test]
+    fn test_expressions_node_sum_int_float() {
+        let mut operator = Sum::new();
+        operator.set_binary_operands([
+            Some(Box::from(Literal::new_from_int(7))),
+            Some(Box::from(Literal::new_from_float(6.5))),
+        ]);
+        let param = match operator.evaluate(&RenderContext::new()) {
+            Ok(p) => p,
+            Err(e) => panic!("Expected a float-type parameter, got an error: {}", e),
+        };
+        assert_eq!(param.get_float_value(), Some(13.5));
+    }
+
+    #[test]
+    fn test_expressions_node_sum_string_int() {
+        let mut operator = Sum::new();
+        operator.set_binary_operands([
+            Some(Box::from(Literal::new_from_str("Hello"))),
+            Some(Box::from(Literal::new_from_float(6.5))),
+        ]);
+        let err = match operator.evaluate(&RenderContext::new()) {
+            Ok(_) => panic!("Expected an error, but got an operator"),
+            Err(e) => e,
+        };
+        assert_eq!(err.message, "Unsupported types of operands for sum operator");
     }
 }
