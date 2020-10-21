@@ -90,7 +90,7 @@ impl Parameter {
                 ParameterType::Float => self.value.float_value.to_string(),
                 ParameterType::Int => self.value.int_value.to_string(),
                 ParameterType::StringType => self.string_value.clone(),
-                ParameterType::Struct => String::new() // TODO: implement
+                ParameterType::Struct => panic!("Not implemented") // TODO: implement
             }
         }
     }

@@ -65,6 +65,24 @@ mod tests {
     use crate::expressions::nodes::literal::Literal;
 
     #[test]
+    fn test_expressions_node_sum_try_create_from_string_valid() {
+        match try_create_from_string(String::from("+ 2"), 0) {
+            NodeCreateResult::Some(_) => {},
+            NodeCreateResult::None => panic!("Expected an operator, got None"),
+            NodeCreateResult::Err(e) => panic!("Expected an operator, got an error: {}", e),
+        };
+    }
+
+    #[test]
+    fn test_expressions_node_sum_try_create_from_string_none() {
+        match try_create_from_string(String::from("- 2"), 0) {
+            NodeCreateResult::Some(_) => panic!("Expected None, got Result"),
+            NodeCreateResult::None => {},
+            NodeCreateResult::Err(e) => panic!("Expected an operator, got an error: {}", e),
+        };
+    }
+
+    #[test]
     fn test_expressions_node_sum_two_ints() {
         let mut operator = Sum::new();
         operator.set_binary_operands([
