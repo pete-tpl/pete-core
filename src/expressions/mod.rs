@@ -3,6 +3,7 @@ use crate::expressions::nodes::{Node, NodeCreator, NodeCreateResult};
 use crate::expressions::nodes::division;
 use crate::expressions::nodes::literal;
 use crate::expressions::nodes::multiplication;
+use crate::expressions::nodes::modulo;
 use crate::expressions::nodes::sum;
 use crate::expressions::nodes::subtraction;
 use crate::expressions::nodes::variable;
@@ -11,9 +12,10 @@ pub mod errors;
 pub mod functions;
 pub mod nodes;
 
-const NODE_CREATORS: [NodeCreator; 6] = [
+const NODE_CREATORS: [NodeCreator; 7] = [
     division::try_create_from_string,
     literal::try_create_from_string,
+    modulo::try_create_from_string,
     multiplication::try_create_from_string,
     subtraction::try_create_from_string,
     sum::try_create_from_string,

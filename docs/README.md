@@ -1,4 +1,6 @@
 # Documentation
 
 - Expressions
-  - [Arithmetic](expressions/arithmetic.md)
+  - Operators
+    - [Arithmetic](expressions/arithmetic.md)
+    - [Logic](expressions/logic.md)
