@@ -60,7 +60,7 @@ impl Node for Division {
 mod tests {
     use super::*;
     use crate::context::render_context::RenderContext;
-    use crate::expressions::nodes::literal::Literal;
+    use crate::expressions::nodes::general::literal::Literal;
 
     #[test]
     fn test_expressions_node_division_try_create_from_string_valid() {

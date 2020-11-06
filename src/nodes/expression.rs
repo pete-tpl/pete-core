@@ -4,7 +4,7 @@ use crate::engine::{NodeBuildResult, RenderResult};
 use crate::error::template_error::TemplateError;
 use crate::expressions as expression_mod;
 use crate::expressions::nodes as expression_nodes;
-use crate::expressions::nodes::literal::Literal;
+use crate::expressions::nodes::general::literal::Literal;
 use crate::nodes::{BaseNode, Node, EXPRESSION_START, EXPRESSION_END};
 
 pub struct ExpressionNode {

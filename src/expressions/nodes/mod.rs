@@ -1,10 +1,5 @@
-pub mod division;
-pub mod literal;
-pub mod multiplication;
-pub mod modulo;
-pub mod subtraction;
-pub mod sum;
-pub mod variable;
+pub mod arithmetic;
+pub mod general;
 
 use crate::context::render_context::RenderContext;
 use crate::expressions::errors::evaluation_error::EvaluationError;

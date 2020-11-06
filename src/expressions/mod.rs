@@ -1,25 +1,14 @@
 use crate::expressions::errors::parsing_error::ParsingError;
 use crate::expressions::nodes::{Node, NodeCreator, NodeCreateResult};
-use crate::expressions::nodes::division;
-use crate::expressions::nodes::literal;
-use crate::expressions::nodes::multiplication;
-use crate::expressions::nodes::modulo;
-use crate::expressions::nodes::sum;
-use crate::expressions::nodes::subtraction;
-use crate::expressions::nodes::variable;
+use crate::expressions::nodes::{arithmetic, general};
 
 pub mod errors;
 pub mod functions;
 pub mod nodes;
 
-const NODE_CREATORS: [NodeCreator; 7] = [
-    division::try_create_from_string,
-    literal::try_create_from_string,
-    modulo::try_create_from_string,
-    multiplication::try_create_from_string,
-    subtraction::try_create_from_string,
-    sum::try_create_from_string,
-    variable::try_create_from_string,
+const NODE_CREATORS: [NodeCreator; 2] = [
+    arithmetic::try_create_from_string,
+    general::try_create_from_string,
 ];
 
 fn get_parsed_node(string_remain: String, offset: usize) -> Result<(Box<dyn Node>, usize), ParsingError> {

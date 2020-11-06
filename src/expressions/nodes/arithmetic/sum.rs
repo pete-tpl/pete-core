@@ -3,14 +3,14 @@ use crate::expressions::errors::evaluation_error::EvaluationError;
 use crate::expressions::nodes::{BinaryOperands, Node, NodeCreateResult};
 use crate::common::variable::Variable;
 
-//// Arithmetic multiplication
-pub struct Multiplication {
+//// Arithmetic sum
+pub struct Sum {
     operands: BinaryOperands,
 }
 
-impl Multiplication {
-    fn new() -> Multiplication {
-        Multiplication{
+impl Sum {
+    fn new() -> Sum {
+        Sum{
             operands: [None, None],
         }
     }
@@ -19,15 +19,15 @@ impl Multiplication {
 pub fn try_create_from_string(expression: String, _offset: usize) -> NodeCreateResult {
     let is_first_char_plus = match expression.chars().nth(0) {
         None => false,
-        Some(c) => '*' == c
+        Some(c) => '+' == c
     };
     match is_first_char_plus {
-        true => NodeCreateResult::Some((Box::new(Multiplication::new()), 1)),
+        true => NodeCreateResult::Some((Box::new(Sum::new()), 1)),
         false => NodeCreateResult::None,
     }
 }
 
-impl Node for Multiplication {
+impl Node for Sum {
     fn evaluate(&self, context: &RenderContext) -> Result<Variable, EvaluationError> {
         for (i, operand) in self.operands.iter().enumerate() {
             match operand {
@@ -39,11 +39,11 @@ impl Node for Multiplication {
         let operand2 = self.operands[1].as_ref().unwrap().evaluate(&context)?;
         let mut result = Variable::new_from_int(0);
         if operand1.get_int_value().is_some() && operand2.get_int_value().is_some() {
-            result.set_int_value(operand1.get_int_value().unwrap() * operand2.get_int_value().unwrap());
+            result.set_int_value(operand1.get_int_value().unwrap() + operand2.get_int_value().unwrap());
         } else if operand1.get_float_value().is_some() && operand2.get_float_value().is_some() {
-            result.set_float_value(operand1.get_float_value().unwrap() * operand2.get_float_value().unwrap());
+            result.set_float_value(operand1.get_float_value().unwrap() + operand2.get_float_value().unwrap());
         } else {
-            return Err(EvaluationError::new(format!("Unsupported types of operands for multiplication operator")))
+            return Err(EvaluationError::new(format!("Unsupported types of operands for sum operator")))
         }
 
         return Ok(result);
@@ -62,11 +62,11 @@ impl Node for Multiplication {
 mod tests {
     use super::*;
     use crate::context::render_context::RenderContext;
-    use crate::expressions::nodes::literal::Literal;
+    use crate::expressions::nodes::general::literal::Literal;
 
     #[test]
-    fn test_expressions_node_multiplication_try_create_from_string_valid() {
-        match try_create_from_string(String::from("* 2"), 0) {
+    fn test_expressions_node_sum_try_create_from_string_valid() {
+        match try_create_from_string(String::from("+ 2"), 0) {
             NodeCreateResult::Some(_) => {},
             NodeCreateResult::None => panic!("Expected an operator, got None"),
             NodeCreateResult::Err(e) => panic!("Expected an operator, got an error: {}", e),
@@ -74,8 +74,8 @@ mod tests {
     }
 
     #[test]
-    fn test_expressions_node_multiplication_try_create_from_string_none() {
-        match try_create_from_string(String::from("+ 2"), 0) {
+    fn test_expressions_node_sum_try_create_from_string_none() {
+        match try_create_from_string(String::from("- 2"), 0) {
             NodeCreateResult::Some(_) => panic!("Expected None, got Result"),
             NodeCreateResult::None => {},
             NodeCreateResult::Err(e) => panic!("Expected an operator, got an error: {}", e),
@@ -83,36 +83,36 @@ mod tests {
     }
 
     #[test]
-    fn test_expressions_node_multiplication_two_ints() {
-        let mut operator = Multiplication::new();
+    fn test_expressions_node_sum_two_ints() {
+        let mut operator = Sum::new();
         operator.set_binary_operands([
-            Some(Box::from(Literal::new_from_int(6))),
-            Some(Box::from(Literal::new_from_int(8))),
+            Some(Box::from(Literal::new_from_int(7))),
+            Some(Box::from(Literal::new_from_int(42))),
         ]);
         let param = match operator.evaluate(&RenderContext::new()) {
             Ok(p) => p,
             Err(e) => panic!("Expected an integer-type parameter, got an error: {}", e),
         };
-        assert_eq!(param.get_int_value(), Some(48));
+        assert_eq!(param.get_int_value(), Some(49));
     }
 
     #[test]
-    fn test_expressions_node_multiplication_int_float() {
-        let mut operator = Multiplication::new();
+    fn test_expressions_node_sum_int_float() {
+        let mut operator = Sum::new();
         operator.set_binary_operands([
-            Some(Box::from(Literal::new_from_int(2))),
-            Some(Box::from(Literal::new_from_float(7.55))),
+            Some(Box::from(Literal::new_from_int(7))),
+            Some(Box::from(Literal::new_from_float(6.5))),
         ]);
         let param = match operator.evaluate(&RenderContext::new()) {
             Ok(p) => p,
             Err(e) => panic!("Expected a float-type parameter, got an error: {}", e),
         };
-        assert_eq!(param.get_float_value(), Some(15.1));
+        assert_eq!(param.get_float_value(), Some(13.5));
     }
 
     #[test]
-    fn test_expressions_node_multiplication_string_int() {
-        let mut operator = Multiplication::new();
+    fn test_expressions_node_sum_string_int() {
+        let mut operator = Sum::new();
         operator.set_binary_operands([
             Some(Box::from(Literal::new_from_str("Hello"))),
             Some(Box::from(Literal::new_from_float(6.5))),
@@ -121,6 +121,6 @@ mod tests {
             Ok(_) => panic!("Expected an error, but got an operator"),
             Err(e) => e,
         };
-        assert_eq!(err.message, "Unsupported types of operands for multiplication operator");
+        assert_eq!(err.message, "Unsupported types of operands for sum operator");
     }
 }
