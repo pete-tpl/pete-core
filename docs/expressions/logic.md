@@ -1,6 +1,6 @@
 # Logic operators
 
-__[NOT IMPLEMENTED]__ `and` — logical AND. Exmaple: `0 and 1`
+`and` — logical AND. Exmaple: `0 and 1`
 
 __[NOT IMPLEMENTED]__ `&&` — logical AND. Exmaple: `0 && 1`
 

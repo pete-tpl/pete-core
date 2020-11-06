@@ -16,6 +16,10 @@ impl Literal {
         }
     }
 
+    pub fn new_from_bool(value: bool) -> Literal {
+        Literal::new(Variable::new_from_boolean(value))
+    }
+
     pub fn new_from_str(string: &str) -> Literal {
         Literal::new(Variable::new_from_str(string))
     }
