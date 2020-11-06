@@ -1,9 +1,9 @@
-use crate::parameter::ParameterStore;
+use crate::common::variable::VariableStore;
 
 pub struct RenderContext {
     pub filename: String,
     pub offset: usize,
-    pub parameters: ParameterStore,
+    pub parameters: VariableStore,
     pub template: String,
 }
 
@@ -12,7 +12,7 @@ impl RenderContext {
         RenderContext {
             filename: String::new(),
             offset: 0,
-            parameters: ParameterStore::new(),
+            parameters: VariableStore::new(),
             template: String::new(),
         }
     }

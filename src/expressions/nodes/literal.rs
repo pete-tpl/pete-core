@@ -2,30 +2,30 @@ use crate::context::render_context::RenderContext;
 use crate::expressions::nodes::{BinaryOperands, Node, NodeCreateResult};
 use crate::expressions::errors::evaluation_error::EvaluationError;
 use crate::expressions::errors::parsing_error::ParsingError;
-use crate::parameter::Parameter;
+use crate::common::variable::Variable;
 
 //// A literal (string, number, etc) which needs no further evaluation
 pub struct Literal {
-    value: Parameter,
+    value: Variable,
 }
 
 impl Literal {
-    pub fn new(value: Parameter) -> Literal {
+    pub fn new(value: Variable) -> Literal {
         Literal {
             value: value,
         }
     }
 
     pub fn new_from_str(string: &str) -> Literal {
-        Literal::new(Parameter::new_from_str(string))
+        Literal::new(Variable::new_from_str(string))
     }
 
     pub fn new_from_int(value: i128) -> Literal {
-        Literal::new(Parameter::new_from_int(value))
+        Literal::new(Variable::new_from_int(value))
     }
 
     pub fn new_from_float(value: f64) -> Literal {
-        Literal::new(Parameter::new_from_float(value))
+        Literal::new(Variable::new_from_float(value))
     }
 }
 
@@ -76,7 +76,7 @@ fn try_create_string_literal(expression: String, offset: usize) -> NodeCreateRes
 }
 
 impl Node for Literal {
-    fn evaluate(&self, _context: &RenderContext) -> Result<Parameter, EvaluationError> {
+    fn evaluate(&self, _context: &RenderContext) -> Result<Variable, EvaluationError> {
         Ok(self.value.clone())
     }
 

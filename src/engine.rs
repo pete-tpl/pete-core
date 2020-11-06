@@ -1,6 +1,6 @@
 use crate::error::template_error::TemplateError;
 
-use crate::parameter::ParameterStore;
+use crate::common::variable::VariableStore;
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::nodes::Node;
@@ -88,7 +88,7 @@ impl Engine {
         Ok(parent_node)
     } 
 
-    pub fn render(&self, template: String, parameters: ParameterStore) -> RenderResult {
+    pub fn render(&self, template: String, parameters: VariableStore) -> RenderResult {
         let parent_node = self.build(&template)?;
         let mut render_context = RenderContext::new();
         render_context.filename = String::from("(root)");
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn test_engine_render_static_only() {
         let engine = Engine::new();
-        let result = engine.render(String::from("Hello, World!"), ParameterStore::new());
+        let result = engine.render(String::from("Hello, World!"), VariableStore::new());
         match result {
             Err(e) => { panic!("Failed to render a template: {}", e) },
             Ok(result) => {
@@ -119,7 +119,7 @@ mod tests {
         let engine = Engine::new();
         let result = engine.render(
             String::from("Hello, World!{# Some comment here #} Nice to meet you."),
-            ParameterStore::new());
+            VariableStore::new());
         match result {
             Err(e) => { panic!("Failed to render a template: {}", e) },
             Ok(result) => {
@@ -133,7 +133,7 @@ mod tests {
         let engine = Engine::new();
         let result = engine.render(
             String::from("Hello, World!{% unknown %}unkn0wn{% endunknown %}Nice to meet you."),
-            ParameterStore::new());
+            VariableStore::new());
         match result {
             Err(e) => {
                 assert_eq!(e.message, "Cannot recognize a node");
@@ -149,7 +149,7 @@ mod tests {
         let engine = Engine::new();
         let result = engine.render(
             String::from("Hello, World!\n{# comment #}\nNice to meet you"),
-            ParameterStore::new());
+            VariableStore::new());
         match result {
             Err(e) => { panic!("Failed to render a template: {}", e) },
             Ok(result) => {
@@ -163,7 +163,7 @@ mod tests {
         let engine = Engine::new();
         let result = engine.render(
             String::from("Hello, World!\n{#- comment #}\nNice to meet you"),
-            ParameterStore::new());
+            VariableStore::new());
         match result {
             Err(e) => { panic!("Failed to render a template: {}", e) },
             Ok(result) => {
@@ -177,7 +177,7 @@ mod tests {
         let engine = Engine::new();
         let result = engine.render(
             String::from("Hello, World!\n{# comment -#}\nNice to meet you"),
-            ParameterStore::new());
+            VariableStore::new());
         match result {
             Err(e) => { panic!("Failed to render a template: {}", e) },
             Ok(result) => {
@@ -191,7 +191,7 @@ mod tests {
         let engine = Engine::new();
         let result = engine.render(
             String::from("Hello, World!\n{#- comment -#}\nNice to meet you"),
-            ParameterStore::new());
+            VariableStore::new());
         match result {
             Err(e) => { panic!("Failed to render a template: {}", e) },
             Ok(result) => {
@@ -205,7 +205,7 @@ mod tests {
         let engine = Engine::new();
         let result = engine.render(
             String::from("Hello, World!\n\n{#- comment -#}\n\nNice to meet you"),
-            ParameterStore::new());
+            VariableStore::new());
         match result {
             Err(e) => { panic!("Failed to render a template: {}", e) },
             Ok(result) => {

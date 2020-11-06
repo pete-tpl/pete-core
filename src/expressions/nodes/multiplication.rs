@@ -1,7 +1,7 @@
 use crate::context::render_context::RenderContext;
 use crate::expressions::errors::evaluation_error::EvaluationError;
 use crate::expressions::nodes::{BinaryOperands, Node, NodeCreateResult};
-use crate::parameter::Parameter;
+use crate::common::variable::Variable;
 
 //// Arithmetic multiplication
 pub struct Multiplication {
@@ -28,7 +28,7 @@ pub fn try_create_from_string(expression: String, _offset: usize) -> NodeCreateR
 }
 
 impl Node for Multiplication {
-    fn evaluate(&self, context: &RenderContext) -> Result<Parameter, EvaluationError> {
+    fn evaluate(&self, context: &RenderContext) -> Result<Variable, EvaluationError> {
         for (i, operand) in self.operands.iter().enumerate() {
             match operand {
                 None => Err(EvaluationError::new(format!("Operand with index '{}' is not defined", i))),
@@ -37,7 +37,7 @@ impl Node for Multiplication {
         }
         let operand1 = self.operands[0].as_ref().unwrap().evaluate(&context)?;
         let operand2 = self.operands[1].as_ref().unwrap().evaluate(&context)?;
-        let mut result = Parameter::new_from_int(0);
+        let mut result = Variable::new_from_int(0);
         if operand1.get_int_value().is_some() && operand2.get_int_value().is_some() {
             result.set_int_value(operand1.get_int_value().unwrap() * operand2.get_int_value().unwrap());
         } else if operand1.get_float_value().is_some() && operand2.get_float_value().is_some() {

@@ -1,7 +1,7 @@
 use crate::context::render_context::RenderContext;
 use crate::expressions::errors::evaluation_error::EvaluationError;
 use crate::expressions::nodes::{BinaryOperands, Node, NodeCreateResult};
-use crate::parameter::Parameter;
+use crate::common::variable::{Variable as CommonVariable};
 
 //// A variable from context
 pub struct Variable {
@@ -53,10 +53,10 @@ impl Variable {
 }
 
 impl Node for Variable {
-    fn evaluate(&self, context: &RenderContext) -> Result<Parameter, EvaluationError> {
+    fn evaluate(&self, context: &RenderContext) -> Result<CommonVariable, EvaluationError> {
         match context.parameters.get(&self.variable_name) {
             Some(p) => Ok(p.clone()),
-            None => Err(EvaluationError::new(format!("Parameter not found: {}", self.variable_name)))
+            None => Err(EvaluationError::new(format!("Variable not found: {}", self.variable_name)))
         }
     }
 
@@ -75,9 +75,9 @@ mod tests {
 
     fn get_context() -> RenderContext {
         let mut context = RenderContext::new();
-        context.parameters.insert(String::from("user1"), Parameter::new_from_str("Alpha"));
-        context.parameters.insert(String::from("user2"), Parameter::new_from_str("Bravo"));
-        context.parameters.insert(String::from("user3"), Parameter::new_from_str("Charlie"));
+        context.parameters.insert(String::from("user1"), CommonVariable::new_from_str("Alpha"));
+        context.parameters.insert(String::from("user2"), CommonVariable::new_from_str("Bravo"));
+        context.parameters.insert(String::from("user3"), CommonVariable::new_from_str("Charlie"));
         context
     }
 
@@ -114,7 +114,7 @@ mod tests {
             Ok(_) => panic!("Expected an error, but got a node"),
             Err(e) => e,
         };
-        assert_eq!(err.message, String::from("Parameter not found: user4"));
+        assert_eq!(err.message, String::from("Variable not found: user4"));
     }
 
     #[test]

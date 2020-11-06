@@ -1,7 +1,7 @@
 use crate::context::render_context::RenderContext;
 use crate::expressions::errors::evaluation_error::EvaluationError;
 use crate::expressions::nodes::{BinaryOperands, Node, NodeCreateResult};
-use crate::parameter::Parameter;
+use crate::common::variable::Variable;
 
 //// Modulo
 pub struct Modulo {
@@ -28,7 +28,7 @@ pub fn try_create_from_string(expression: String, _offset: usize) -> NodeCreateR
 }
 
 impl Node for Modulo {
-    fn evaluate(&self, context: &RenderContext) -> Result<Parameter, EvaluationError> {
+    fn evaluate(&self, context: &RenderContext) -> Result<Variable, EvaluationError> {
         for (i, operand) in self.operands.iter().enumerate() {
             match operand {
                 None => Err(EvaluationError::new(format!("Operand with index '{}' is not defined", i))),
@@ -51,7 +51,7 @@ impl Node for Modulo {
             return Err(EvaluationError::new(format!("Divisor must be greater than zero, but it is: {}", divisor)))
         }
 
-        Ok(Parameter::new_from_int(dividend % divisor))
+        Ok(Variable::new_from_int(dividend % divisor))
     }
 
     fn is_operator(&self) -> bool {
