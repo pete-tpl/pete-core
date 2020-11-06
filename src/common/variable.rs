@@ -16,7 +16,6 @@ union Value {
     int_value: i128,
 }
 
-#[allow(dead_code)]
 pub struct Variable {
     value: Value,
     string_value: String,
@@ -32,6 +31,12 @@ impl Variable {
             param_type: VariableType::StringType,
             struct_value: HashMap::new(),
         }
+    }
+
+    pub fn new_from_boolean(value: bool) -> Variable {
+        let mut p = Variable::new();
+        p.set_boolean_value(value);
+        p
     }
 
     pub fn new_from_string(string: String) -> Variable {
@@ -95,6 +100,18 @@ impl Variable {
         }
     }
 
+    pub fn get_boolean_value(&self) -> bool {
+        unsafe {
+            match self.param_type {
+                VariableType::Boolean => self.value.boolean_value,
+                VariableType::Float => self.value.float_value != 0.0,
+                VariableType::Int => self.value.int_value != 0,
+                VariableType::StringType => self.string_value != "",
+                VariableType::Struct => panic!("Not implemented") // TODO: implement
+            }
+        }
+    }
+
     pub fn get_int_value(&self) -> Option<i128> {
         unsafe {
             match self.param_type {
@@ -140,4 +157,34 @@ fn clone_parameter_store(src: &VariableStore) -> VariableStore {
         dest.insert(k.to_string(), v.clone());
     }
     dest
+}
+
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_common_variable_get_boolean_value_bool() {
+        let value = Variable::new_from_boolean(true);
+        assert_eq!(value.get_boolean_value(), true);
+        let value = Variable::new_from_boolean(false);
+        assert_eq!(value.get_boolean_value(), false);
+    }
+
+    #[test]
+    fn test_common_variable_get_boolean_value_string() {
+        let value = Variable::new_from_str("Hello");
+        assert_eq!(value.get_boolean_value(), true);
+        let value = Variable::new_from_str("");
+        assert_eq!(value.get_boolean_value(), false);
+    }
+
+    #[test]
+    fn test_common_variable_get_boolean_value_int() {
+        let value = Variable::new_from_int(999);
+        assert_eq!(value.get_boolean_value(), true);
+        let value = Variable::new_from_int(0);
+        assert_eq!(value.get_boolean_value(), false);
+    }
 }
