@@ -3,6 +3,9 @@ use crate::expressions::errors::evaluation_error::EvaluationError;
 use crate::expressions::nodes::{BinaryOperands, Node, NodeCreateResult};
 use crate::common::variable::Variable;
 
+const WORD_FORM: &str = "or";
+const SYMBOL_FORM: &str = "||";
+
 //// Logical Or
 pub struct Or {
     operands: BinaryOperands,
@@ -17,14 +20,19 @@ impl Or {
 }
 
 pub fn try_create_from_string(expression: String, _offset: usize) -> NodeCreateResult {
-    let result = expression.starts_with("||") ||
-        (expression.starts_with("or") && 
-            (expression.len() <= 2 ||
-                !expression.chars().nth(2).unwrap().is_alphabetic()));
-    match result {
-        true => NodeCreateResult::Some((Box::new(Or::new()), 1)),
+    let is_symbol_form = expression.starts_with(SYMBOL_FORM);
+    let is_word_form = expression.starts_with(WORD_FORM) &&
+        (expression.len() <= WORD_FORM.len() ||
+            !expression.chars().nth(WORD_FORM.len()).unwrap().is_alphabetic());
+
+    match is_symbol_form || is_word_form {
+        true => {
+            let keyword = if is_symbol_form { SYMBOL_FORM } else { WORD_FORM };
+            NodeCreateResult::Some((Box::new(Or::new()), keyword.len()))
+        },
         false => NodeCreateResult::None,
     }
+
 }
 
 impl Node for Or {

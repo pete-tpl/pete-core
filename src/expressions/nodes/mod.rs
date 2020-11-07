@@ -26,7 +26,7 @@ pub trait Node {
 }
 
 pub enum NodeCreateResult {
-    Some((Box<dyn Node>, usize)),
+    Some((Box<dyn Node>, usize)), // node and cursor increment
     None,
     Err(ParsingError),
 }
