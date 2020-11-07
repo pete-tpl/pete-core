@@ -91,4 +91,8 @@ impl Node for Literal {
     fn set_binary_operands(&mut self, _operands: BinaryOperands) {
 
     }
+
+    fn get_type(&self) -> &str {
+        "literal"
+    }
 }

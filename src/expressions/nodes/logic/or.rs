@@ -49,6 +49,10 @@ impl Node for Or {
     fn set_binary_operands(&mut self, operands: BinaryOperands) {
         self.operands = operands;
     }
+
+    fn get_type(&self) -> &str {
+        "or"
+    }
 }
 
 #[cfg(test)]

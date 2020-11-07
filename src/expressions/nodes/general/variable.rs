@@ -67,6 +67,10 @@ impl Node for Variable {
     fn set_binary_operands(&mut self, _operands: BinaryOperands) {
         
     }
+
+    fn get_type(&self) -> &str {
+        "variable"
+    }
 }
 
 #[cfg(test)]
@@ -82,7 +86,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expressions_nodes_variable_correct() {
+    fn test_expressions_nodes_general_variable_correct() {
         let result = match try_create_from_string(String::from("user2 otherstuff"), 0) {
             NodeCreateResult::Some(result) => result,
             NodeCreateResult::Err(e) => panic!("Exprected a result, got an error: {}", e),
@@ -100,7 +104,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expressions_nodes_variable_non_existing_var() {
+    fn test_expressions_nodes_general_variable_non_existing_var() {
         let result = match try_create_from_string(String::from("user4 otherstuff"), 0) {
             NodeCreateResult::Some(result) => result,
             NodeCreateResult::Err(e) => panic!("Exprected a result, got an error: {}", e),
@@ -118,7 +122,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expressions_nodes_variable_function() {
+    fn test_expressions_nodes_general_variable_function() {
         match try_create_from_string(String::from("my_function(arg1, arg2) abc"), 0) {
             NodeCreateResult::Some(_) => panic!("Exprected None, but got a result"),
             NodeCreateResult::Err(e) => panic!("Exprected None, but got an error: {}", e),
@@ -127,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expressions_nodes_variable_not_var_string_literal() {
+    fn test_expressions_nodes_general_variable_not_var_string_literal() {
         match try_create_from_string(String::from("\"hello\" stuff"), 0) {
             NodeCreateResult::Some(_) => panic!("Exprected None, but got a result"),
             NodeCreateResult::Err(e) => panic!("Exprected None, but got an error: {}", e),
@@ -136,7 +140,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expressions_nodes_variable_not_var_int_literal() {
+    fn test_expressions_nodes_general_variable_not_var_int_literal() {
         match try_create_from_string(String::from("1234 stuff"), 0) {
             NodeCreateResult::Some(_) => panic!("Exprected None, but got a result"),
             NodeCreateResult::Err(e) => panic!("Exprected None, but got an error: {}", e),

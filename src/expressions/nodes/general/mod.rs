@@ -1,9 +1,11 @@
 pub mod literal;
+pub mod variable;
 
 use crate::expressions::nodes::{NodeCreator, NodeCreateResult};
 
-const NODE_CREATORS: [NodeCreator; 1] = [
+const NODE_CREATORS: [NodeCreator; 2] = [
     literal::try_create_from_string,
+    variable::try_create_from_string,
 ];
 
 pub fn try_create_from_string(string_remain: String, offset: usize) -> NodeCreateResult {

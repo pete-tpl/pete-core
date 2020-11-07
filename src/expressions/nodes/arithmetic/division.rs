@@ -54,6 +54,10 @@ impl Node for Division {
     fn set_binary_operands(&mut self, operands: BinaryOperands) {
         self.operands = operands;
     }
+
+    fn get_type(&self) -> &str {
+        "division"
+    }
 }
 
 #[cfg(test)]

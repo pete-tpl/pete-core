@@ -110,4 +110,17 @@ mod tests {
         };
         assert_eq!(param.get_int_value(), Some(13));
     }
+
+    #[test]
+    fn test_expressions_parse_logical_and() {
+        let literal = match parse(String::from("0 and 0")) {
+            Ok(l) => l,
+            Err(e) => panic!("Expected a literal, got an error: {}", e)
+        };
+        let param = match literal.evaluate(&RenderContext::new()) {
+            Ok(p) => p,
+            Err(e) => panic!("Expected a parameter, got an error: {}", e)
+        };
+        assert_eq!(param.get_boolean_value(), false);
+    }
 }
