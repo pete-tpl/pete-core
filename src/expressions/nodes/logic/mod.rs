@@ -1,9 +1,11 @@
 pub mod and;
+pub mod or;
 
 use crate::expressions::nodes::{NodeCreator, NodeCreateResult};
 
-const NODE_CREATORS: [NodeCreator; 1] = [
+const NODE_CREATORS: [NodeCreator; 2] = [
     and::try_create_from_string,
+    or::try_create_from_string,
 ];
 
 pub fn try_create_from_string(string_remain: String, offset: usize) -> NodeCreateResult {
