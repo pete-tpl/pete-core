@@ -9,18 +9,20 @@ use crate::nodes::container::ContainerNode;
 use crate::nodes::comment::CommentNode;
 use crate::nodes::expression::ExpressionNode;
 use crate::nodes::static_node::StaticNode;
+use crate::nodes::tags;
 
-const NODE_CREATORS: [NodeCreator; 3] = [
+const NODE_CREATORS: [NodeCreator; 4] = [
     CommentNode::try_create_from_template,
     ExpressionNode::try_create_from_template,
     StaticNode::try_create_from_template,
+    tags::try_create_from_template,
 ];
 
 pub struct Engine {}
 
 pub enum NodeBuildResult {
-    EndOfNode(usize),
-    NestedNode(usize),
+    EndOfNode(usize), // end position of node
+    NestedNode(usize), // last character before nested node
     Error(TemplateError),
 }
 
@@ -43,27 +45,8 @@ impl Engine {
         None
     }
 
-    fn build_node(&self, build_context: &mut BuildContext, mut parsed_node: Box<dyn Node>, parent_node: &mut Box<dyn Node>) -> Result<(), TemplateError> {
-        match parsed_node.build(&build_context) {
-            NodeBuildResult::EndOfNode(offset) => {
-                build_context.template_remain = build_context.template_remain[offset+1..].to_string();
-                parent_node.add_child(parsed_node);
-                build_context.offset += offset;
-                Ok(())
-            },
-            NodeBuildResult::Error(err) => {
-                return Err(err)
-            },
-            _ => {
-                return Err(TemplateError::create(
-                    build_context.template.clone(),
-                    build_context.offset,
-                    String::from("Rendering results except NodeBuildResult::EndOfNode are not implemented")));
-            }
-        }
-    }
-
     fn build(&self, template: &String) -> Result<Box<dyn Node>, TemplateError> {
+        let mut nodes_stack: Vec<Box<dyn Node>> = Vec::new();
         let mut parent_node:Box<dyn Node> = Box::from(ContainerNode::create());
         let mut build_context = BuildContext::new();
         build_context.template = template.clone();
@@ -75,15 +58,62 @@ impl Engine {
             }
             prev_template_remain_len = build_context.template_remain.len();
 
-            let parsed_node = self.parse_node(&build_context);
-            if parsed_node.is_none() {
-                return Err(TemplateError::create(
-                    template.clone(),
-                    build_context.offset,
-                    String::from("Cannot recognize a node")));
-            }
-            self.build_node(&mut build_context, parsed_node.unwrap(), &mut parent_node)?;
+            if parent_node.is_continuation(&build_context) {
+                // TODO: check if can be removed. This block is pertty much similar to 
+                // the "match parent_node.build(&build_context) {" block where 
+                // "if parent_node.is_continuation(&build_context)" avaluates to FALSE
+                match parent_node.build(&build_context) {
+                    NodeBuildResult::EndOfNode(offset) => {
+                        build_context.template_remain = build_context.template_remain[offset+1..].to_string();
+                        build_context.offset += offset;
 
+                        match nodes_stack.pop() {
+                            Some(n) => {
+                                parent_node = n;
+                            },
+                            None => {
+                                return Err(TemplateError::create(
+                                    template.clone(),
+                                    build_context.offset,
+                                    String::from("Unexpected end of node stack.")));
+                            }
+                        }
+                    },
+                    NodeBuildResult::Error(err) => {
+                        return Err(err)
+                    },
+                    NodeBuildResult::NestedNode(offset) => {
+                        build_context.template_remain = build_context.template_remain[offset+1..].to_string();
+                        build_context.offset += offset;
+                    }
+                };
+            } else {
+                let mut parsed_node = match self.parse_node(&build_context) {
+                    Some(n) => n,
+                    None => {
+                        return Err(TemplateError::create(
+                            template.clone(),
+                            build_context.offset,
+                            String::from("Cannot recognize a node")));
+                    }
+                };
+                match parsed_node.build(&build_context) {
+                    NodeBuildResult::EndOfNode(offset) => {
+                        parent_node.add_child(parsed_node);
+                        build_context.template_remain = build_context.template_remain[offset+1..].to_string();
+                        build_context.offset += offset;
+                    },
+                    NodeBuildResult::Error(err) => {
+                        return Err(err)
+                    },
+                    NodeBuildResult::NestedNode(offset) => {
+                        nodes_stack.push(parent_node);
+                        parent_node = parsed_node;
+                        build_context.template_remain = build_context.template_remain[offset+1..].to_string();
+                        build_context.offset += offset;
+                    }
+                };
+            }
         }
         Ok(parent_node)
     } 
@@ -210,6 +240,20 @@ mod tests {
             Err(e) => { panic!("Failed to render a template: {}", e) },
             Ok(result) => {
                 assert_eq!(result, "Hello, World!\n\nNice to meet you");
+            }
+        }
+    }
+
+    #[test]
+    fn test_engine_render_continuation_blocks() { // FIXME
+        let engine = Engine::new();
+        let result = engine.render(
+            String::from("Hello, {% if 4+2 %}test{% endif %}"),
+            VariableStore::new());
+        match result {
+            Err(e) => { panic!("Failed to render a template: {}", e) },
+            Ok(result) => {
+                assert_eq!(result, "Hello, test");
             }
         }
     }

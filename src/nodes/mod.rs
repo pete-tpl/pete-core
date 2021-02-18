@@ -1,5 +1,6 @@
 pub mod container;
 pub mod comment;
+pub mod tags;
 pub mod expression;
 pub mod static_node;
 
@@ -12,14 +13,25 @@ const EXPRESSION_END: &str = "}}";
 const COMMENT_START: &str = "{#";
 const COMMENT_END: &str = "#}";
 const TAG_START: &str = "{%";
+const TAG_END: &str = "%}";
 
 pub trait Node {
     fn add_child(&mut self, child: Box<dyn Node>);
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult;
+    fn is_continuation(&self, context: &BuildContext) -> bool;
     fn render(&self, context: &RenderContext) -> RenderResult;
 
     fn has_nolinebreak_end(&self) -> bool;
     fn has_nolinebreak_beginning(&self) -> bool;
+
+    fn get_base_node(&self) -> &BaseNode;
+
+    fn debug_name(&self) -> &str;
+    fn debug_print(&self) -> String {
+        return format!("[{} - {}] {}", self.get_base_node().start_offset, self.get_base_node().end_offset ,self.debug_name())
+    }
+    
+    
 }
 
 pub struct BaseNode {

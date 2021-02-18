@@ -68,6 +68,10 @@ impl Node for ExpressionNode {
         }
     }
 
+    fn is_continuation(&self, _context: &BuildContext) -> bool {
+        return false;
+    }
+
     fn render(&self, context: &RenderContext) -> RenderResult {
         match self.expression_node.evaluate(&context) {
             Ok(parameter) => RenderResult::Ok(parameter.as_string()),
@@ -86,5 +90,13 @@ impl Node for ExpressionNode {
 
     fn has_nolinebreak_beginning(&self) -> bool {
         self.base_node.has_nolinebreak_beginning
+    }
+
+    fn get_base_node(&self) -> &BaseNode {
+        return &self.base_node;
+    }
+
+    fn debug_name(&self) -> &str {
+        return "expression";
     }
 }

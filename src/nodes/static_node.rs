@@ -45,6 +45,10 @@ impl Node for StaticNode {
         NodeBuildResult::EndOfNode(end_pos)
     }
 
+    fn is_continuation(&self, _context: &BuildContext) -> bool {
+        return false;
+    }
+
     fn render(&self, _context: &RenderContext) -> RenderResult {
         return Result::Ok(self.content.clone())
     }
@@ -55,6 +59,14 @@ impl Node for StaticNode {
 
     fn has_nolinebreak_beginning(&self) -> bool {
         self.base_node.has_nolinebreak_beginning
+    }
+
+    fn get_base_node(&self) -> &BaseNode {
+        return &self.base_node;
+    }
+
+    fn debug_name(&self) -> &str {
+        return "static";
     }
 }
 

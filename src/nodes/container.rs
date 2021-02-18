@@ -25,6 +25,10 @@ impl Node for ContainerNode {
         NodeBuildResult::NestedNode(0)
     }
 
+    fn is_continuation(&self, _context: &BuildContext) -> bool {
+        return false;
+    }
+
     fn render(&self, context: &RenderContext) -> RenderResult {
         let mut result = String::new();
         let mut previous_no_linebreak_end = false;
@@ -57,5 +61,13 @@ impl Node for ContainerNode {
 
     fn has_nolinebreak_beginning(&self) -> bool {
         self.base_node.has_nolinebreak_beginning
+    }
+
+    fn get_base_node(&self) -> &BaseNode {
+        return &self.base_node;
+    }
+
+    fn debug_name(&self) -> &str {
+        return "container";
     }
 }
