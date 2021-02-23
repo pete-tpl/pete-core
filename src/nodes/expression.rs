@@ -39,14 +39,13 @@ impl Node for ExpressionNode {
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
         self.base_node.has_nolinebreak_beginning = context.template_remain[2..3].to_string() == "-";
         self.build_context = context.clone();
-        let end_pos = context.template_remain.find(EXPRESSION_END);
-        match end_pos {
+        match expression_mod::get_end_offset(context.template_remain.clone(), EXPRESSION_END) {
             None => NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
                 context.offset,
                 String::from("Expression is not closed"))),
-            Some(end_pos) => {
-                let end_pos_with_tag = end_pos - 1 + EXPRESSION_END.len();
+            Some(end_pos_with_tag) => {
+                let end_pos = end_pos_with_tag - EXPRESSION_END.len();
                 self.base_node.end_offset = context.offset + end_pos_with_tag;
                 self.base_node.has_nolinebreak_end = context.template_remain[end_pos-1..end_pos].to_string() == "-";
                 self.base_node.start_offset = context.offset;
