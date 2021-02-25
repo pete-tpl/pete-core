@@ -21,7 +21,9 @@ const NODE_CREATORS: [NodeCreator; 4] = [
 pub struct Engine {}
 
 pub enum NodeBuildResult {
-    EndOfNode(usize), // end position of node
+    // end position of node. Relative to start of node.
+    // does NOT consider the current offset from context
+    EndOfNode(usize),
     NestedNode(usize), // last character before nested node
     Error(TemplateError),
 }
@@ -59,7 +61,7 @@ impl Engine {
             prev_template_remain_len = build_context.template_remain.len();
 
             if parent_node.is_continuation(&build_context) {
-                // TODO: check if can be removed. This block is pertty much similar to 
+                // TODO: check if can be removed. This block is pretty much similar to 
                 // the "match parent_node.build(&build_context) {" block where 
                 // "if parent_node.is_continuation(&build_context)" avaluates to FALSE
                 match parent_node.build(&build_context) {
@@ -68,8 +70,9 @@ impl Engine {
                         build_context.offset += offset;
 
                         match nodes_stack.pop() {
-                            Some(n) => {
-                                parent_node = n;
+                            Some(mut upper_parent_node) => {
+                                upper_parent_node.add_child(parent_node);
+                                parent_node = upper_parent_node;
                             },
                             None => {
                                 return Err(TemplateError::create(
@@ -114,6 +117,7 @@ impl Engine {
                     }
                 };
             }
+            build_context.offset += 1;
         }
         Ok(parent_node)
     } 
@@ -245,15 +249,15 @@ mod tests {
     }
 
     #[test]
-    fn test_engine_render_continuation_blocks() { // FIXME
+    fn test_engine_render_continuation_blocks() {
         let engine = Engine::new();
         let result = engine.render(
-            String::from("Hello, {% if 4+2 %}test{% endif %}"),
+            String::from("Hello, {% if 4 + 2 %}test{% endif %} 123"),
             VariableStore::new());
         match result {
             Err(e) => { panic!("Failed to render a template: {}", e) },
             Ok(result) => {
-                assert_eq!(result, "Hello, test");
+                assert_eq!(result, "Hello, test 123");
             }
         }
     }

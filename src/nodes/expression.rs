@@ -58,7 +58,7 @@ impl Node for ExpressionNode {
                         return NodeBuildResult::Error(TemplateError::create(
                             self.build_context.template.clone(),
                             self.build_context.offset,
-                            String::from(format!("Failed to evaluate an expression: {}", err.message))
+                            String::from(format!("Failed to build an expression: {}", err.message))
                         ));
                     }
                 };

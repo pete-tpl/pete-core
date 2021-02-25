@@ -1,6 +1,7 @@
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
+use crate::expressions;
 use crate::expressions::nodes::{Node as ExpressionNode};
 use crate::error::template_error::TemplateError;
 use crate::nodes::{BaseNode, Node, TAG_START, TAG_END};
@@ -10,7 +11,8 @@ const ENDIF_KEYWORD: &str = "endif";
 
 pub struct ConditionNode {
     base_node: BaseNode,
-    expressions: Vec<(Box<dyn ExpressionNode>, Box<dyn Node>,)>,
+    // Indexes of expressions match to indexes of children nodes
+    expressions: Vec<Box<dyn ExpressionNode>>,
 }
 
 impl ConditionNode {
@@ -30,21 +32,41 @@ impl ConditionNode {
     }
 
     fn build_if_block_start(&mut self, context: &BuildContext, string: &str) -> NodeBuildResult {
-        let s = context.template_remain.clone();
         self.base_node.start_offset = context.offset;
-        match s.find(TAG_END) {
-            Some(end_pos) => NodeBuildResult::NestedNode(end_pos+TAG_END.len()-1),
-            None => NodeBuildResult::Error(TemplateError::create(
+        self.base_node.has_nolinebreak_beginning = &context.template_remain[TAG_START.len()+1..TAG_START.len()+2] == "-";
+        let tag_end_pos_rel = match expressions::get_end_offset(String::from(string), TAG_END) {
+            Some(end_pos) => end_pos,
+            None => {
+                return NodeBuildResult::Error(TemplateError::create(
+                    context.template.clone(),
+                    context.offset,
+                    String::from("Cannot find closing tag.")));
+            }
+        };
+        let offset_shift = context.template_remain.len() - string.len();
+        let tag_end_pos_abs = tag_end_pos_rel + offset_shift;
+        let expr_start_pos = offset_shift;
+        let expr_end_pos = tag_end_pos_abs - TAG_END.len() + 1;
+        let expr_string = context.template_remain[expr_start_pos..expr_end_pos].to_string();
+        match expressions::parse(String::from(expr_string)) {
+            Ok(expr_node) => {
+                self.expressions.push(expr_node);
+                NodeBuildResult::NestedNode(tag_end_pos_abs)
+            },
+            Err(err) => NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
                 context.offset,
-                String::from("Cannot find closing tag."))),
+                String::from(format!("An error in the Condition Node. Failed to evaluate an expression: {}", err.message))
+            ))
         }
     }
 
     fn build_if_block_end(&mut self, context: &BuildContext, string: &str) -> NodeBuildResult {
-        let s = context.template_remain.clone();
-        match s.find(TAG_END) {
-            Some(end_pos) => NodeBuildResult::EndOfNode(end_pos+TAG_END.len()-1),
+        match expressions::get_end_offset(context.template_remain.clone(), TAG_END) {
+            Some(end_pos) => {
+                self.base_node.end_offset = context.offset + end_pos;
+                NodeBuildResult::EndOfNode(end_pos)
+            },
             None => NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
                 context.offset,
@@ -69,16 +91,13 @@ fn strip_chars_before_keyword(string: &String) -> &str {
 
 impl Node for ConditionNode {
     fn add_child(&mut self, child: Box<dyn Node>) {
-        match self.expressions.last_mut() {
-            None => { return; },
-            Some(e) => { e.1 = child; },
-        };
+        self.base_node.children.push(child);
     }
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
         let string = strip_chars_before_keyword(&context.template_remain);
         if string.starts_with(IF_KEYWORD) {
-            return self.build_if_block_start(context, string);
+            return self.build_if_block_start(context, &string[IF_KEYWORD.len()..]);
         } else if string.starts_with(ENDIF_KEYWORD) {
             return self.build_if_block_end(context, string);
         } else {
@@ -94,7 +113,45 @@ impl Node for ConditionNode {
         return string.starts_with(ENDIF_KEYWORD);
     }
 
-    fn render(&self, _context: &RenderContext) -> RenderResult {
+    fn render(&self, context: &RenderContext) -> RenderResult {
+        for (i, expression) in self.expressions.iter().enumerate() {
+            let result = match expression.evaluate(context) {
+                Ok(variable) => {
+                    if variable.get_boolean_value() {
+                        let child = match self.base_node.children.get(i) {
+                            Some(child) => child,
+                            None => {
+                                return RenderResult::Err(TemplateError::create(
+                                    context.template.clone(),
+                                    context.offset,
+                                    String::from(format!("An item with index {} not found in children nodes", i))
+                                ))
+                            }
+                        };
+                        let r = match child.render(context) {
+                            Ok(rendered_string) => RenderResult::Ok(rendered_string),
+                            Err(err) => RenderResult::Err(TemplateError::create(
+                                context.template.clone(),
+                                context.offset,
+                                String::from(format!("Failed to evaluate an expression: {}", err.message))
+                            )),
+                        };
+                        Some(r)
+                    } else {
+                        None
+                    }
+                },
+                Err(err) => Some(RenderResult::Err(TemplateError::create(
+                    context.template.clone(),
+                    context.offset,
+                    String::from(format!("Failed to evaluate an expression: {}", err.message))
+                ))),
+            };
+            match result {
+                Some(r) => { return r; },
+                None => {},
+            }
+        }
         RenderResult::Ok(String::new())
     }
 
@@ -155,7 +212,7 @@ mod tests {
         context.offset = 15;
         match node.build(&context) {
             NodeBuildResult::EndOfNode(offset) => {
-                assert_eq!(offset, 22);
+                assert_eq!(offset, 10);
             },
             _ => panic!("Failed to close a node")
         }

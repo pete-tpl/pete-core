@@ -110,6 +110,7 @@ mod tests {
 
     #[test]
     fn test_expressions_parse_sum_of_int() {
+        // FIXME: Works incorrectly if sum operator is NOT separated with spaces
         let literal = match parse(String::from("3 + 2 + 8")) {
             Ok(l) => l,
             Err(e) => panic!("Expected a literal, got an error: {}", e)

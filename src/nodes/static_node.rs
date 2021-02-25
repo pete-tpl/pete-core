@@ -39,9 +39,9 @@ impl Node for StaticNode {
             end_pos = context.template_remain.find(EXPRESSION_START);
         }
         let end_pos = (if end_pos.is_none() { context.template_remain.len() } else { end_pos.unwrap() }) - 1;
+        self.base_node.start_offset = context.offset;
         self.base_node.end_offset = context.offset + end_pos;
         self.content = context.template_remain[0..end_pos+1].to_string();
-        self.base_node.start_offset = context.offset;
         NodeBuildResult::EndOfNode(end_pos)
     }
 
