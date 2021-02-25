@@ -63,7 +63,7 @@ fn try_create_numeric_literal(expression: String, offset: usize) -> NodeCreateRe
     }
     let number = expression[0..last_digit_index+1].to_string();
     match number.parse::<i32>() {
-        Ok(n) => NodeCreateResult::Some((Box::new(Literal::new_from_int(n.into())), last_digit_index)),
+        Ok(n) => NodeCreateResult::Some((Box::new(Literal::new_from_int(n.into())), last_digit_index + 1)),
         Err(e) => NodeCreateResult::Err(ParsingError::new(offset, format!("Cannot convert char \"{}\" to integer: {}", offset, e))),
     }
 }
@@ -73,7 +73,7 @@ fn try_create_string_literal(expression: String, offset: usize) -> NodeCreateRes
     match exp.find("\"") {
         Some(pos) => {
             let string = &exp[..pos];
-            NodeCreateResult::Some((Box::new(Literal::new_from_str(&string)), pos+1))
+            NodeCreateResult::Some((Box::new(Literal::new_from_str(&string)), pos+2)) // pos+2: +1 per each quote
         },
         None => NodeCreateResult::Err(ParsingError::new(offset, format!("String is not closed"))),
     }

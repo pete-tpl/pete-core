@@ -40,8 +40,8 @@ pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
         let node = match get_parsed_node(string_remain.clone(), offset) {
             Ok(r) => {
                 let (parsed_node, offset_increment) = r;
-                offset += offset_increment + 1;
-                string_remain = string_remain[offset_increment+1..].to_string();
+                offset += offset_increment;
+                string_remain = string_remain[offset_increment..].to_string();
                 Ok(parsed_node)
             },
             Err(e) => Err(e),
@@ -109,8 +109,7 @@ mod tests {
     }
 
     #[test]
-    fn test_expressions_parse_sum_of_int() {
-        // FIXME: Works incorrectly if sum operator is NOT separated with spaces
+    fn test_expressions_parse_sum_of_int_space() {
         let literal = match parse(String::from("3 + 2 + 8")) {
             Ok(l) => l,
             Err(e) => panic!("Expected a literal, got an error: {}", e)
@@ -120,6 +119,19 @@ mod tests {
             Err(e) => panic!("Expected a parameter, got an error: {}", e)
         };
         assert_eq!(param.get_int_value(), Some(13));
+    }
+
+    #[test]
+    fn test_expressions_parse_sum_of_int_nospace() {
+        let literal = match parse(String::from("4+2")) {
+            Ok(l) => l,
+            Err(e) => panic!("Expected a literal, got an error: {}", e)
+        };
+        let param = match literal.evaluate(&RenderContext::new()) {
+            Ok(p) => p,
+            Err(e) => panic!("Expected a parameter, got an error: {}", e)
+        };
+        assert_eq!(param.get_int_value(), Some(6));
     }
 
     #[test]

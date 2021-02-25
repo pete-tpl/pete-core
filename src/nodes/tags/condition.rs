@@ -125,6 +125,7 @@ impl Node for ConditionNode {
                                     context.template.clone(),
                                     context.offset,
                                     String::from(format!("An item with index {} not found in children nodes", i))
+                                    // FIXME: List of children nodes is empty. Probably ENGINE doesn't add children nodes for parents
                                 ))
                             }
                         };
