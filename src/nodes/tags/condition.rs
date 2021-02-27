@@ -125,7 +125,6 @@ impl Node for ConditionNode {
                                     context.template.clone(),
                                     context.offset,
                                     String::from(format!("An item with index {} not found in children nodes", i))
-                                    // FIXME: List of children nodes is empty. Probably ENGINE doesn't add children nodes for parents
                                 ))
                             }
                         };
@@ -176,6 +175,7 @@ impl Node for ConditionNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::nodes::static_node::StaticNode;
 
     #[test]
     fn test_nodes_tags_condition_try_create_success() {
@@ -209,6 +209,9 @@ mod tests {
             },
             _ => panic!("Failed to build a node")
         }
+
+        node.add_child(Box::from(StaticNode::try_create_from_template(&String::from("test")).unwrap()));
+
         context.template_remain = String::from("{% endif %}");
         context.offset = 15;
         match node.build(&context) {
