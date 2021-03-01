@@ -61,14 +61,8 @@ impl Engine {
             prev_template_remain_len = build_context.template_remain.len();
 
             if parent_node.is_continuation(&build_context) {
-                // TODO: check if can be removed. This block is pretty much similar to 
-                // the "match parent_node.build(&build_context) {" block where 
-                // "if parent_node.is_continuation(&build_context)" avaluates to FALSE
                 match parent_node.build(&build_context) {
                     NodeBuildResult::EndOfNode(offset) => {
-                        build_context.template_remain = build_context.template_remain[offset+1..].to_string();
-                        build_context.offset += offset;
-
                         match nodes_stack.pop() {
                             Some(mut upper_parent_node) => {
                                 upper_parent_node.add_child(parent_node);
@@ -80,14 +74,14 @@ impl Engine {
                                     build_context.offset,
                                     String::from("Unexpected end of node stack.")));
                             }
-                        }
+                        };
+                        build_context.apply_offset(offset);
                     },
                     NodeBuildResult::Error(err) => {
                         return Err(err)
                     },
                     NodeBuildResult::NestedNode(offset) => {
-                        build_context.template_remain = build_context.template_remain[offset+1..].to_string();
-                        build_context.offset += offset;
+                        build_context.apply_offset(offset);
                     }
                 };
             } else {
@@ -103,8 +97,7 @@ impl Engine {
                 match parsed_node.build(&build_context) {
                     NodeBuildResult::EndOfNode(offset) => {
                         parent_node.add_child(parsed_node);
-                        build_context.template_remain = build_context.template_remain[offset+1..].to_string();
-                        build_context.offset += offset;
+                        build_context.apply_offset(offset);
                     },
                     NodeBuildResult::Error(err) => {
                         return Err(err)
@@ -112,8 +105,7 @@ impl Engine {
                     NodeBuildResult::NestedNode(offset) => {
                         nodes_stack.push(parent_node);
                         parent_node = parsed_node;
-                        build_context.template_remain = build_context.template_remain[offset+1..].to_string();
-                        build_context.offset += offset;
+                        build_context.apply_offset(offset);
                     }
                 };
             }
