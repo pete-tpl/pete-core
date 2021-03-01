@@ -47,10 +47,10 @@ impl Engine {
         None
     }
 
-    fn build_continuation(&self, result: NodeBuildResult, build_context: &mut BuildContext,
-                          nodes_stack: &mut Vec<Box<dyn Node>>, parent_node: Box<dyn Node>)
+    fn build_continuation(&self, build_context: &mut BuildContext,
+                          nodes_stack: &mut Vec<Box<dyn Node>>, mut parent_node: Box<dyn Node>)
                           -> Result<Box<dyn Node>, TemplateError> {
-        match result {
+        match parent_node.build(&build_context) {
             NodeBuildResult::EndOfNode(offset) => {
                 match nodes_stack.pop() {
                     Some(mut upper_parent_node) => {
@@ -114,12 +114,11 @@ impl Engine {
             }
             prev_template_remain_len = build_context.template_remain.len();
 
-            if parent_node.is_continuation(&build_context) {
-                let build_result = parent_node.build(&build_context);
-                parent_node = self.build_continuation(build_result, &mut build_context, &mut nodes_stack, parent_node)?;
+            parent_node = if parent_node.is_continuation(&build_context) {
+                self.build_continuation(&mut build_context, &mut nodes_stack, parent_node)?
             } else {
-                parent_node = self.build_new_block(&mut build_context, &mut nodes_stack, parent_node)?;
-            }
+                self.build_new_block(&mut build_context, &mut nodes_stack, parent_node)?
+            };
             build_context.offset += 1;
         }
         Ok(parent_node)
