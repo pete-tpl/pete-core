@@ -72,6 +72,35 @@ impl Engine {
         }
     }
 
+    fn build_new_block(&self, build_context: &mut BuildContext,
+                       nodes_stack: &mut Vec<Box<dyn Node>>, mut parent_node: Box<dyn Node>)
+                       -> Result<Box<dyn Node>, TemplateError> {
+        let mut parsed_node = match self.parse_node(&build_context) {
+            Some(n) => n,
+            None => {
+                return Err(TemplateError::create(
+                    build_context.template.clone(),
+                    build_context.offset,
+                    String::from("Cannot recognize a node")));
+            }
+        };
+        match parsed_node.build(&build_context) {
+            NodeBuildResult::EndOfNode(offset) => {
+                parent_node.add_child(parsed_node);
+                build_context.apply_offset(offset);
+                Ok(parent_node)
+            },
+            NodeBuildResult::Error(err) => {
+                Err(err)
+            },
+            NodeBuildResult::NestedNode(offset) => {
+                nodes_stack.push(parent_node);
+                build_context.apply_offset(offset);
+                Ok(parsed_node)
+            }
+        }
+    }
+
     fn build(&self, template: &String) -> Result<Box<dyn Node>, TemplateError> {
         let mut nodes_stack: Vec<Box<dyn Node>> = Vec::new();
         let mut parent_node:Box<dyn Node> = Box::from(ContainerNode::create());
@@ -89,29 +118,7 @@ impl Engine {
                 let build_result = parent_node.build(&build_context);
                 parent_node = self.build_continuation(build_result, &mut build_context, &mut nodes_stack, parent_node)?;
             } else {
-                let mut parsed_node = match self.parse_node(&build_context) {
-                    Some(n) => n,
-                    None => {
-                        return Err(TemplateError::create(
-                            template.clone(),
-                            build_context.offset,
-                            String::from("Cannot recognize a node")));
-                    }
-                };
-                match parsed_node.build(&build_context) {
-                    NodeBuildResult::EndOfNode(offset) => {
-                        parent_node.add_child(parsed_node);
-                        build_context.apply_offset(offset);
-                    },
-                    NodeBuildResult::Error(err) => {
-                        return Err(err)
-                    },
-                    NodeBuildResult::NestedNode(offset) => {
-                        nodes_stack.push(parent_node);
-                        parent_node = parsed_node;
-                        build_context.apply_offset(offset);
-                    }
-                };
+                parent_node = self.build_new_block(&mut build_context, &mut nodes_stack, parent_node)?;
             }
             build_context.offset += 1;
         }
