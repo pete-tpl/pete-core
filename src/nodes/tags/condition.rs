@@ -3,10 +3,12 @@ use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
 use crate::expressions;
 use crate::expressions::nodes::{Node as ExpressionNode};
+use crate::expressions::nodes::general::literal::Literal;
 use crate::error::template_error::TemplateError;
 use crate::nodes::{BaseNode, Node, TAG_START, TAG_END};
 
 const IF_KEYWORD: &str = "if";
+const ELSE_KEYWORD: &str = "else";
 const ENDIF_KEYWORD: &str = "endif";
 
 pub struct ConditionNode {
@@ -59,6 +61,35 @@ impl ConditionNode {
                 String::from(format!("An error in the Condition Node. Failed to evaluate an expression: {}", err.message))
             ))
         }
+    }
+
+    fn build_if_block_else(&mut self, context: &BuildContext, string: &str) -> NodeBuildResult {
+        let tag_end_pos_rel = match expressions::get_end_offset(String::from(string), TAG_END) {
+            Some(end_pos) => end_pos,
+            None => {
+                return NodeBuildResult::Error(TemplateError::create(
+                    context.template.clone(),
+                    context.offset,
+                    String::from("Cannot find closing tag.")));
+            }
+        };
+        
+        let offset_shift = context.template_remain.len() - string.len();
+        let tag_end_pos_abs = tag_end_pos_rel + offset_shift;
+        let expr_start_pos = offset_shift;
+        let expr_end_pos = tag_end_pos_abs - TAG_END.len() + 1;
+        let expr_string = context.template_remain[expr_start_pos..expr_end_pos].to_string();
+
+        if expr_string.trim_matches(' ').len() > 0 {
+            return NodeBuildResult::Error(TemplateError::create(
+                context.template.clone(),
+                context.offset,
+                String::from(format!("An error in the Condition Node. Unexpected characters in ELSE block: {}", expr_string))
+            ))
+        }
+
+        self.expressions.push(Box::from(Literal::new_from_bool(true)));
+        NodeBuildResult::NestedNode(tag_end_pos_abs)
     }
 
     fn build_if_block_end(&mut self, context: &BuildContext) -> NodeBuildResult {
@@ -119,6 +150,8 @@ impl Node for ConditionNode {
         let string = strip_chars_before_keyword(&context.template_remain);
         if string.starts_with(IF_KEYWORD) {
             return self.build_if_block_start(context, &string[IF_KEYWORD.len()..]);
+        } else if string.starts_with(ELSE_KEYWORD) {
+            return self.build_if_block_else(context, &string[ELSE_KEYWORD.len()..]);
         } else if string.starts_with(ENDIF_KEYWORD) {
             return self.build_if_block_end(context);
         } else {
@@ -131,7 +164,7 @@ impl Node for ConditionNode {
 
     fn is_continuation(&self, context: &BuildContext) -> bool {
         let string = strip_chars_before_keyword(&context.template_remain);
-        return string.starts_with(ENDIF_KEYWORD);
+        return string.starts_with(ENDIF_KEYWORD) || string.starts_with(ELSE_KEYWORD);
     }
 
     fn render(&self, context: &RenderContext) -> RenderResult {
@@ -204,7 +237,6 @@ mod tests {
         let mut node = ConditionNode::create();
         let mut context = BuildContext::new();
         context.template_remain = String::from("{% if 4+2 %}test{% endif %}");
-        context.offset = 7;
         let result = node.build(&context);
         match result {
             NodeBuildResult::NestedNode(offset) => {
@@ -216,7 +248,6 @@ mod tests {
         node.add_child(Box::from(StaticNode::try_create_from_template(&String::from("test")).unwrap()));
 
         context.template_remain = String::from("{% endif %}");
-        context.offset = 15;
         match node.build(&context) {
             NodeBuildResult::EndOfNode(offset) => {
                 assert_eq!(offset, 10);
@@ -232,5 +263,24 @@ mod tests {
             },
             Err(e) => panic!("Expected to render a node, but got an error: {}", e)
         }
+    }
+
+    #[test]
+    fn test_nodes_tags_condition_else_build() {
+        let mut node = ConditionNode::create();
+        let mut context = BuildContext::new();
+        context.template_remain = String::from("{% else %}test2{% endif %}");
+        if !node.is_continuation(&context) {
+            panic!("Expected: is_continuation = FALSE, got: TRUE")
+        }
+
+        let result = node.build(&context);
+        match result {
+            NodeBuildResult::NestedNode(offset) => {
+                assert_eq!(offset, 9);
+            },
+            NodeBuildResult::Error(e) => panic!("Failed to build a node {}", e.message.clone()),
+            _ => {}
+        };
     }
 }
