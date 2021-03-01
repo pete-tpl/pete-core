@@ -61,7 +61,7 @@ impl ConditionNode {
         }
     }
 
-    fn build_if_block_end(&mut self, context: &BuildContext, string: &str) -> NodeBuildResult {
+    fn build_if_block_end(&mut self, context: &BuildContext) -> NodeBuildResult {
         match expressions::get_end_offset(context.template_remain.clone(), TAG_END) {
             Some(end_pos) => {
                 self.base_node.end_offset = context.offset + end_pos;
@@ -99,7 +99,7 @@ impl Node for ConditionNode {
         if string.starts_with(IF_KEYWORD) {
             return self.build_if_block_start(context, &string[IF_KEYWORD.len()..]);
         } else if string.starts_with(ENDIF_KEYWORD) {
-            return self.build_if_block_end(context, string);
+            return self.build_if_block_end(context);
         } else {
             return NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
