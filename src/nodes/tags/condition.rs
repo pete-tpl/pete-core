@@ -74,6 +74,27 @@ impl ConditionNode {
         }
     }
 
+    // Renders a condition with index "index"
+    fn render_conditional_block(&self, index: usize, context: &RenderContext) -> RenderResult {
+        let child = match self.base_node.children.get(index) {
+            Some(child) => child,
+            None => {
+                return RenderResult::Err(TemplateError::create(
+                    context.template.clone(),
+                    context.offset,
+                    String::from(format!("An item with index {} not found in children nodes", index))
+                ));
+            }
+        };
+        match child.render(context) {
+            Ok(rendered_string) => RenderResult::Ok(rendered_string),
+            Err(err) => RenderResult::Err(TemplateError::create(
+                context.template.clone(),
+                context.offset,
+                String::from(format!("Failed to evaluate an expression: {}", err.message))
+            )),
+        }
+    }
 }
 
 fn strip_chars_before_keyword(string: &String) -> &str {
@@ -118,25 +139,7 @@ impl Node for ConditionNode {
             let result = match expression.evaluate(context) {
                 Ok(variable) => {
                     if variable.get_boolean_value() {
-                        let child = match self.base_node.children.get(i) {
-                            Some(child) => child,
-                            None => {
-                                return RenderResult::Err(TemplateError::create(
-                                    context.template.clone(),
-                                    context.offset,
-                                    String::from(format!("An item with index {} not found in children nodes", i))
-                                ))
-                            }
-                        };
-                        let r = match child.render(context) {
-                            Ok(rendered_string) => RenderResult::Ok(rendered_string),
-                            Err(err) => RenderResult::Err(TemplateError::create(
-                                context.template.clone(),
-                                context.offset,
-                                String::from(format!("Failed to evaluate an expression: {}", err.message))
-                            )),
-                        };
-                        Some(r)
+                        Some(self.render_conditional_block(i, context))
                     } else {
                         None
                     }
