@@ -47,6 +47,31 @@ impl Engine {
         None
     }
 
+    fn build_continuation(&self, result: NodeBuildResult, build_context: &mut BuildContext,
+                          nodes_stack: &mut Vec<Box<dyn Node>>, parent_node: Box<dyn Node>)
+                          -> Result<Box<dyn Node>, TemplateError> {
+        match result {
+            NodeBuildResult::EndOfNode(offset) => {
+                match nodes_stack.pop() {
+                    Some(mut upper_parent_node) => {
+                        upper_parent_node.add_child(parent_node);
+                        build_context.apply_offset(offset);
+                        Ok(upper_parent_node)
+                    },
+                    None => Err(TemplateError::create(
+                            build_context.template.clone(),
+                            build_context.offset,
+                            String::from("Unexpected end of node stack.")))
+                }
+            },
+            NodeBuildResult::Error(err) => Err(err),
+            NodeBuildResult::NestedNode(offset) => {
+                build_context.apply_offset(offset);
+                Ok(parent_node)
+            }
+        }
+    }
+
     fn build(&self, template: &String) -> Result<Box<dyn Node>, TemplateError> {
         let mut nodes_stack: Vec<Box<dyn Node>> = Vec::new();
         let mut parent_node:Box<dyn Node> = Box::from(ContainerNode::create());
@@ -61,29 +86,8 @@ impl Engine {
             prev_template_remain_len = build_context.template_remain.len();
 
             if parent_node.is_continuation(&build_context) {
-                match parent_node.build(&build_context) {
-                    NodeBuildResult::EndOfNode(offset) => {
-                        match nodes_stack.pop() {
-                            Some(mut upper_parent_node) => {
-                                upper_parent_node.add_child(parent_node);
-                                parent_node = upper_parent_node;
-                            },
-                            None => {
-                                return Err(TemplateError::create(
-                                    template.clone(),
-                                    build_context.offset,
-                                    String::from("Unexpected end of node stack.")));
-                            }
-                        };
-                        build_context.apply_offset(offset);
-                    },
-                    NodeBuildResult::Error(err) => {
-                        return Err(err)
-                    },
-                    NodeBuildResult::NestedNode(offset) => {
-                        build_context.apply_offset(offset);
-                    }
-                };
+                let build_result = parent_node.build(&build_context);
+                parent_node = self.build_continuation(build_result, &mut build_context, &mut nodes_stack, parent_node)?;
             } else {
                 let mut parsed_node = match self.parse_node(&build_context) {
                     Some(n) => n,
