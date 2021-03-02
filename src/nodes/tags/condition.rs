@@ -34,38 +34,7 @@ impl ConditionNode {
         }
     }
 
-    fn build_block_start(&mut self, context: &BuildContext, string: &String) -> NodeBuildResult {
-        self.base_node.start_offset = context.offset;
-        self.base_node.has_nolinebreak_beginning = &context.template_remain[TAG_START.len()+1..TAG_START.len()+2] == "-";
-        let tag_end_pos_rel = match expressions::get_end_offset(string, TAG_END) {
-            Some(end_pos) => end_pos,
-            None => {
-                return NodeBuildResult::Error(TemplateError::create(
-                    context.template.clone(),
-                    context.offset,
-                    String::from("Cannot find closing tag.")));
-            }
-        };
-        let offset_shift = context.template_remain.len() - string.len();
-        let tag_end_pos_abs = tag_end_pos_rel + offset_shift;
-        let expr_start_pos = offset_shift;
-        let expr_end_pos = tag_end_pos_abs - TAG_END.len() + 1;
-        let expr_string = context.template_remain[expr_start_pos..expr_end_pos].to_string();
-        match expressions::parse(String::from(expr_string)) {
-            Ok(expr_node) => {
-                self.expressions.push(expr_node);
-                NodeBuildResult::NestedNode(tag_end_pos_abs)
-            },
-            Err(err) => NodeBuildResult::Error(TemplateError::create(
-                context.template.clone(),
-                context.offset,
-                String::from(format!("An error in the Condition Node. Failed to evaluate an expression: {}", err.message))
-            ))
-        }
-    }
-
-    // TODO: block builders look similar, especially IF and ELSEIF. Check if some logic can be deduplicated
-    fn build_block_elseif(&mut self, context: &BuildContext, string: &String) -> NodeBuildResult {
+    fn build_block_if(&mut self, context: &BuildContext, string: &String) -> NodeBuildResult {
         self.base_node.start_offset = context.offset;
         self.base_node.has_nolinebreak_beginning = &context.template_remain[TAG_START.len()+1..TAG_START.len()+2] == "-";
         let tag_end_pos_rel = match expressions::get_end_offset(string, TAG_END) {
@@ -181,9 +150,9 @@ impl Node for ConditionNode {
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
         let string = strip_chars_before_keyword(&context.template_remain);
         if string.starts_with(IF_KEYWORD) {
-            return self.build_block_start(context, &String::from(&string[IF_KEYWORD.len()..]));
+            return self.build_block_if(context, &String::from(&string[IF_KEYWORD.len()..]));
         } else if string.starts_with(ELSEIF_KEYWORD) {
-            return self.build_block_elseif(context, &String::from(&string[ELSEIF_KEYWORD.len()..]));
+            return self.build_block_if(context, &String::from(&string[ELSEIF_KEYWORD.len()..]));
         } else if string.starts_with(ELSE_KEYWORD) {
             return self.build_if_block_else(context, &String::from(&string[ELSE_KEYWORD.len()..]));
         } else if string.starts_with(ENDIF_KEYWORD) {
