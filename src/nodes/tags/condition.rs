@@ -34,10 +34,10 @@ impl ConditionNode {
         }
     }
 
-    fn build_block_start(&mut self, context: &BuildContext, string: &str) -> NodeBuildResult {
+    fn build_block_start(&mut self, context: &BuildContext, string: &String) -> NodeBuildResult {
         self.base_node.start_offset = context.offset;
         self.base_node.has_nolinebreak_beginning = &context.template_remain[TAG_START.len()+1..TAG_START.len()+2] == "-";
-        let tag_end_pos_rel = match expressions::get_end_offset(String::from(string), TAG_END) {
+        let tag_end_pos_rel = match expressions::get_end_offset(string, TAG_END) {
             Some(end_pos) => end_pos,
             None => {
                 return NodeBuildResult::Error(TemplateError::create(
@@ -65,10 +65,10 @@ impl ConditionNode {
     }
 
     // TODO: block builders look similar, especially IF and ELSEIF. Check if some logic can be deduplicated
-    fn build_block_elseif(&mut self, context: &BuildContext, string: &str) -> NodeBuildResult {
+    fn build_block_elseif(&mut self, context: &BuildContext, string: &String) -> NodeBuildResult {
         self.base_node.start_offset = context.offset;
         self.base_node.has_nolinebreak_beginning = &context.template_remain[TAG_START.len()+1..TAG_START.len()+2] == "-";
-        let tag_end_pos_rel = match expressions::get_end_offset(String::from(string), TAG_END) {
+        let tag_end_pos_rel = match expressions::get_end_offset(string, TAG_END) {
             Some(end_pos) => end_pos,
             None => {
                 return NodeBuildResult::Error(TemplateError::create(
@@ -95,8 +95,8 @@ impl ConditionNode {
         }
     }
 
-    fn build_if_block_else(&mut self, context: &BuildContext, string: &str) -> NodeBuildResult {
-        let tag_end_pos_rel = match expressions::get_end_offset(String::from(string), TAG_END) {
+    fn build_if_block_else(&mut self, context: &BuildContext, string: &String) -> NodeBuildResult {
+        let tag_end_pos_rel = match expressions::get_end_offset(string, TAG_END) {
             Some(end_pos) => end_pos,
             None => {
                 return NodeBuildResult::Error(TemplateError::create(
@@ -125,7 +125,7 @@ impl ConditionNode {
     }
 
     fn build_block_end(&mut self, context: &BuildContext) -> NodeBuildResult {
-        match expressions::get_end_offset(context.template_remain.clone(), TAG_END) {
+        match expressions::get_end_offset(&context.template_remain, TAG_END) {
             Some(end_pos) => {
                 self.base_node.end_offset = context.offset + end_pos;
                 NodeBuildResult::EndOfNode(end_pos)
@@ -181,11 +181,11 @@ impl Node for ConditionNode {
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
         let string = strip_chars_before_keyword(&context.template_remain);
         if string.starts_with(IF_KEYWORD) {
-            return self.build_block_start(context, &string[IF_KEYWORD.len()..]);
+            return self.build_block_start(context, &String::from(&string[IF_KEYWORD.len()..]));
         } else if string.starts_with(ELSEIF_KEYWORD) {
-            return self.build_block_elseif(context, &string[ELSEIF_KEYWORD.len()..]);
+            return self.build_block_elseif(context, &String::from(&string[ELSEIF_KEYWORD.len()..]));
         } else if string.starts_with(ELSE_KEYWORD) {
-            return self.build_if_block_else(context, &string[ELSE_KEYWORD.len()..]);
+            return self.build_if_block_else(context, &String::from(&string[ELSE_KEYWORD.len()..]));
         } else if string.starts_with(ENDIF_KEYWORD) {
             return self.build_block_end(context);
         } else {

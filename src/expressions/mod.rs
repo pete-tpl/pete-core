@@ -70,7 +70,7 @@ pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
 // Calculates end offset of expression
 // get_end_offset("2+3 }} hello", "}}") = 5
 // get_end_offset("22-1 -%} hello", "%}") = 7
-pub fn get_end_offset(string: String, ending: &str) -> Option<usize> {
+pub fn get_end_offset(string: &String, ending: &str) -> Option<usize> {
     match string.find(ending) {
         Some(offset) => Some(offset - 1 + ending.len()), // TODO: consider quoted strings
         None => None
@@ -149,12 +149,12 @@ mod tests {
 
     #[test]
     fn test_expresions_get_end_offset() {
-        match get_end_offset(String::from("2+3 }} hello"), "}}") {
+        match get_end_offset(&String::from("2+3 }} hello"), "}}") {
             Some(offset) => assert_eq!(offset, 5),
             None => panic!("Expected number, got None")
         }
 
-        match get_end_offset(String::from("22-1 -%} hello"), "%}") {
+        match get_end_offset(&String::from("22-1 -%} hello"), "%}") {
             Some(offset) => assert_eq!(offset, 7),
             None => panic!("Expected number, got None")
         }

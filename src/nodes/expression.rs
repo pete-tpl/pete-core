@@ -39,7 +39,7 @@ impl Node for ExpressionNode {
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
         self.base_node.has_nolinebreak_beginning = context.template_remain[2..3].to_string() == "-";
         self.build_context = context.clone();
-        match expression_mod::get_end_offset(context.template_remain.clone(), EXPRESSION_END) {
+        match expression_mod::get_end_offset(&context.template_remain, EXPRESSION_END) {
             None => NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
                 context.offset,
