@@ -27,10 +27,9 @@ impl ConditionNode {
     }
 
     pub fn try_create_from_template(template: &String) -> Option<Box<dyn Node>> {
-        let string = strip_chars_before_keyword(template);
-        match string.starts_with(IF_KEYWORD) {
-            true => Some(Box::from(ConditionNode::create())),
-            false => None
+        match get_keyword(template).0 {
+            IF_KEYWORD => Some(Box::from(ConditionNode::create())),
+            _ => None
         }
     }
 
@@ -129,17 +128,15 @@ impl ConditionNode {
     }
 }
 
-fn strip_chars_before_keyword(string: &String) -> &str {
-    let s1 = match string.strip_prefix(TAG_START) {
-        Some(s) => s,
-        None => string,
+// Returns two strings: a keyword (if, elseif, etc) and a remain AFTER keyword
+// e.g. get_keyword("{% if 1 + 1 %}") => ("if", " 1 + 1 %}")
+fn get_keyword(string: &String) -> (&str, String) {
+    let s = string.trim_start_matches(|c| !char::is_alphabetic(c));
+    let endpos = match s.find(|c| !char::is_alphabetic(c)) {
+        Some(p) => p,
+        None => s.len() - 1,
     };
-    
-    
-    match s1.strip_prefix("-") {
-        Some(s) => s,
-        None => s1,
-    }.trim_start_matches(" ")
+    (&s[..endpos], String::from(&s[endpos..]))
 }
 
 impl Node for ConditionNode {
@@ -148,26 +145,22 @@ impl Node for ConditionNode {
     }
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
-        let string = strip_chars_before_keyword(&context.template_remain);
-        if string.starts_with(IF_KEYWORD) {
-            return self.build_block_if(context, &String::from(&string[IF_KEYWORD.len()..]));
-        } else if string.starts_with(ELSEIF_KEYWORD) {
-            return self.build_block_if(context, &String::from(&string[ELSEIF_KEYWORD.len()..]));
-        } else if string.starts_with(ELSE_KEYWORD) {
-            return self.build_if_block_else(context, &String::from(&string[ELSE_KEYWORD.len()..]));
-        } else if string.starts_with(ENDIF_KEYWORD) {
-            return self.build_block_end(context);
-        } else {
-            return NodeBuildResult::Error(TemplateError::create(
+        let (keyword, remain) = get_keyword(&context.template_remain);
+        match keyword {
+            IF_KEYWORD => self.build_block_if(context, &remain),
+            ELSEIF_KEYWORD => self.build_block_if(context, &remain),
+            ELSE_KEYWORD => self.build_if_block_else(context, &remain),
+            ENDIF_KEYWORD => self.build_block_end(context),
+            _ => NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
                 context.offset,
-                String::from("Unknown keyword. Expected: (if|else|elseif|endif)")));
+                String::from("Unknown keyword. Expected: (if|else|elseif|endif)"))),
         }
     }
 
     fn is_continuation(&self, context: &BuildContext) -> bool {
-        let string = strip_chars_before_keyword(&context.template_remain);
-        return string.starts_with(ENDIF_KEYWORD) || string.starts_with(ELSE_KEYWORD);
+        let keyword = get_keyword(&context.template_remain).0;
+        ELSEIF_KEYWORD == keyword || ELSE_KEYWORD == keyword || ENDIF_KEYWORD == keyword
     }
 
     fn render(&self, context: &RenderContext) -> RenderResult {
