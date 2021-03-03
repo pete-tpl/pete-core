@@ -21,8 +21,13 @@ pub trait Node {
     fn is_continuation(&self, context: &BuildContext) -> bool;
     fn render(&self, context: &RenderContext) -> RenderResult;
 
-    fn has_nolinebreak_end(&self) -> bool;
-    fn has_nolinebreak_beginning(&self) -> bool;
+    fn has_nolinebreak_end(&self) -> bool {
+        self.get_base_node().has_nolinebreak_end
+    }
+
+    fn has_nolinebreak_beginning(&self) -> bool {
+        self.get_base_node().has_nolinebreak_beginning
+    }
 
     fn get_base_node(&self) -> &BaseNode;
 

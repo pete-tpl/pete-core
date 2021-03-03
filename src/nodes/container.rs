@@ -55,13 +55,6 @@ impl Node for ContainerNode {
         RenderResult::Ok(result)
     }
 
-    fn has_nolinebreak_end(&self) -> bool {
-        self.base_node.has_nolinebreak_end
-    }
-
-    fn has_nolinebreak_beginning(&self) -> bool {
-        self.base_node.has_nolinebreak_beginning
-    }
 
     fn get_base_node(&self) -> &BaseNode {
         return &self.base_node;
