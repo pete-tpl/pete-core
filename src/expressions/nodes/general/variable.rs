@@ -9,28 +9,18 @@ pub struct Variable {
 }
 
 pub fn try_create_from_string(expression: String, _offset: usize) -> NodeCreateResult {
-    let mut current_char = expression.chars().nth(0);
-    let is_first_char_alphabetic = match current_char {
-        None => false,
-        Some(c) => c.is_alphabetic()
+    let is_first_char_alphabetic = match expression.find(char::is_alphabetic) {
+        Some(i) => i == 0,
+        None => false
     };
     if !is_first_char_alphabetic {
         return NodeCreateResult::None;
     }
 
-    // TODO: strip_suffix with function ?
-    let mut cursor: usize = 0;
-    while cursor < expression.len() {
-        current_char = expression.chars().nth(cursor+1);
-        let is_valid_variable_char = match current_char {
-            None => false,
-            Some(c) => c.is_alphanumeric() || '_' == c  || '-' == c
-        };
-        if !is_valid_variable_char {
-            break;
-        }
-        cursor += 1;
-    }
+    let cursor = match expression.find(|c| !char::is_alphanumeric(c) && !('_' == c  || '-' == c)) {
+        Some(i) => i,
+        None => expression.len(),
+    } - 1;
 
     // If bracket opens after the last character - it's a function, not a variable
     let is_function_call = match expression.chars().nth(cursor+1) {
@@ -38,7 +28,7 @@ pub fn try_create_from_string(expression: String, _offset: usize) -> NodeCreateR
         Some(c) => '(' == c
     };
     if is_function_call {
-        return NodeCreateResult::None;
+        return NodeCreateResult::None; // TODO: implement function calls
     }
 
     let node = Variable::new(expression[..cursor+1].to_string());
