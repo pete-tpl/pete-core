@@ -31,17 +31,23 @@ pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
             return Err(ParsingError::new(offset, String::from("An infinite loop detected")));
         }
         prev_string_remain_len = string_remain.len();
-        if string_remain.starts_with(" ") {
-            string_remain = string_remain[1..].to_string();
-            offset += 1;
-            continue;
+
+        let string_remain_orig_len = string_remain.len();
+        string_remain = string_remain.trim_start_matches(" ").to_string();
+        offset += string_remain_orig_len - string_remain.len();
+        if string_remain.len() == 0 {
+            break;
         }
 
         let node = match get_parsed_node(string_remain.clone(), offset) {
             Ok(r) => {
                 let (parsed_node, offset_increment) = r;
                 offset += offset_increment;
-                string_remain = string_remain[offset_increment..].to_string();
+                string_remain = if string_remain.len() > offset_increment {
+                    string_remain[offset_increment..].to_string()
+                } else {
+                    String::new()
+                };
                 Ok(parsed_node)
             },
             Err(e) => Err(e),
@@ -59,7 +65,6 @@ pub fn parse(string: String) -> Result<Box<dyn Node>, ParsingError> {
             node
         };
         nodes_stack.push(last_node);
-
     }
     match nodes_stack.pop() {
         Some(r) => Ok(r),

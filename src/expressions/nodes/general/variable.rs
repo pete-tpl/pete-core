@@ -18,6 +18,7 @@ pub fn try_create_from_string(expression: String, _offset: usize) -> NodeCreateR
         return NodeCreateResult::None;
     }
 
+    // TODO: strip_suffix with function ?
     let mut cursor: usize = 0;
     while cursor < expression.len() {
         current_char = expression.chars().nth(cursor+1);
@@ -41,7 +42,7 @@ pub fn try_create_from_string(expression: String, _offset: usize) -> NodeCreateR
     }
 
     let node = Variable::new(expression[..cursor+1].to_string());
-    return NodeCreateResult::Some((Box::new(node), cursor));
+    return NodeCreateResult::Some((Box::new(node), cursor+1));
 }
 
 impl Variable {
@@ -93,7 +94,7 @@ mod tests {
             NodeCreateResult::None => panic!("Exprected a result, got None"),
         };
         let (node, cursor) = result;
-        assert_eq!(cursor, 4);
+        assert_eq!(cursor, 5);
 
         let context = get_context();
         let param = match node.evaluate(&context) {
@@ -111,7 +112,7 @@ mod tests {
             NodeCreateResult::None => panic!("Exprected a result, got None"),
         };
         let (node, cursor) = result;
-        assert_eq!(cursor, 4);
+        assert_eq!(cursor, 5);
 
         let context = get_context();
         let err = match node.evaluate(&context) {
