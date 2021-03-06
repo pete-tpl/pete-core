@@ -72,6 +72,7 @@ impl Node for ExpressionNode {
     }
 
     fn render(&self, context: &RenderContext) -> RenderResult {
+        println!("RENDER expression {}", self.debug_print());
         match self.expression_node.evaluate(&context) {
             Ok(parameter) => RenderResult::Ok(parameter.as_string()),
             Err(err) => RenderResult::Err(TemplateError::create(

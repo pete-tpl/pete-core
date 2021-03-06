@@ -50,6 +50,7 @@ impl Node for StaticNode {
     }
 
     fn render(&self, _context: &RenderContext) -> RenderResult {
+        println!("RENDER static {}", self.debug_print());
         return Result::Ok(self.content.clone())
     }
 

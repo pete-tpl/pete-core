@@ -32,9 +32,7 @@ pub type RenderResult = Result<String, TemplateError>;
 
 impl Engine {
     pub fn new() -> Engine {
-        Engine {
-
-        }
+        Engine {}
     }
 
     fn parse_node(&self, build_context: &BuildContext) -> Option<Box<dyn Node>> {
@@ -52,6 +50,7 @@ impl Engine {
                           -> Result<Box<dyn Node>, TemplateError> {
         match parent_node.build(&build_context) {
             NodeBuildResult::EndOfNode(offset) => {
+                println!("Ended continuation: {}", parent_node.debug_print());
                 match nodes_stack.pop() {
                     Some(mut upper_parent_node) => {
                         upper_parent_node.add_child(parent_node);
@@ -66,6 +65,7 @@ impl Engine {
             },
             NodeBuildResult::Error(err) => Err(err),
             NodeBuildResult::NestedNode(offset) => {
+                println!("Nested node in continuation: {}", parent_node.debug_print());
                 build_context.apply_offset(offset);
                 Ok(parent_node)
             }
@@ -86,6 +86,7 @@ impl Engine {
         };
         match parsed_node.build(&build_context) {
             NodeBuildResult::EndOfNode(offset) => {
+                println!("End of new node: {}", parsed_node.debug_print());
                 parent_node.add_child(parsed_node);
                 build_context.apply_offset(offset);
                 Ok(parent_node)
@@ -94,6 +95,7 @@ impl Engine {
                 Err(err)
             },
             NodeBuildResult::NestedNode(offset) => {
+                println!("Newsing new node {}", parsed_node.debug_print());
                 nodes_stack.push(parent_node);
                 build_context.apply_offset(offset);
                 Ok(parsed_node)
@@ -115,12 +117,16 @@ impl Engine {
             prev_template_remain_len = build_context.template_remain.len();
 
             parent_node = if parent_node.is_continuation(&build_context) {
+                println!("Continuation: {}", parent_node.debug_print());
                 self.build_continuation(&mut build_context, &mut nodes_stack, parent_node)?
             } else {
+                println!("New block: {}", parent_node.debug_print());
                 self.build_new_block(&mut build_context, &mut nodes_stack, parent_node)?
             };
+            println!("Parent_node: {}", parent_node.debug_print());
             build_context.offset += 1;
         }
+        parent_node.update_end_offset();
         Ok(parent_node)
     } 
 
@@ -131,6 +137,11 @@ impl Engine {
         render_context.template = template;
         render_context.parameters = parameters;
         parent_node.render(&render_context)
+    }
+
+    pub fn debug_print_structure(&self, template: String) -> RenderResult {
+        let parent_node = self.build(&template)?;
+        RenderResult::Ok(parent_node.debug_print_structure(0))
     }
 }
 

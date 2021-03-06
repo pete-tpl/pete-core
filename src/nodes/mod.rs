@@ -36,7 +36,22 @@ pub trait Node {
         return format!("[{} - {}] {}", self.get_base_node().start_offset, self.get_base_node().end_offset ,self.debug_name())
     }
     
-    
+    fn debug_print_structure(&self, nesting_level: usize) -> String {
+        let mut result = format!("|{} {} \n", (0..nesting_level).map(|_| "-").collect::<String>(), self.debug_print());
+        for child in self.get_base_node().get_children() {
+            result += child.debug_print_structure(nesting_level + 1).as_str();
+        }
+
+        result
+    }
+
+    fn update_end_offset(&self) {
+        let end_offset = match self.get_base_node().get_children().last() {
+            Some(c) => c.get_base_node().end_offset,
+            None => 0,
+        };
+        self.get_base_node().end_offset = end_offset;
+    }
 }
 
 pub struct BaseNode {
@@ -56,6 +71,10 @@ impl BaseNode {
             has_nolinebreak_end: false,
             start_offset: 0
         }
+    }
+
+    fn get_children(&self) -> &Vec<Box<dyn Node>> {
+        &self.children
     }
 }
 

@@ -107,6 +107,7 @@ impl ConditionNode {
 
     // Renders a condition with index "index"
     fn render_conditional_block(&self, index: usize, context: &RenderContext) -> RenderResult {
+        println!("RENDER condition {}", self.debug_print());
         let child = match self.base_node.children.get(index) {
             Some(child) => child,
             None => {
