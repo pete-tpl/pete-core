@@ -30,6 +30,7 @@ pub trait Node {
     }
 
     fn get_base_node(&self) -> &BaseNode;
+    fn get_base_node_mut(&mut self) -> &mut BaseNode;
 
     fn debug_name(&self) -> &str;
     fn debug_print(&self) -> String {
@@ -45,12 +46,12 @@ pub trait Node {
         result
     }
 
-    fn update_end_offset(&self) {
+    fn update_end_offset(&mut self) {
         let end_offset = match self.get_base_node().get_children().last() {
             Some(c) => c.get_base_node().end_offset,
             None => 0,
         };
-        self.get_base_node().end_offset = end_offset;
+        self.get_base_node_mut().set_end_offset(end_offset);
     }
 }
 
@@ -75,6 +76,10 @@ impl BaseNode {
 
     fn get_children(&self) -> &Vec<Box<dyn Node>> {
         &self.children
+    }
+
+    fn set_end_offset(&mut self, offset: usize) {
+        self.end_offset = offset;
     }
 }
 

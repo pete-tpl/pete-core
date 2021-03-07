@@ -50,13 +50,16 @@ impl Node for StaticNode {
     }
 
     fn render(&self, _context: &RenderContext) -> RenderResult {
-        println!("RENDER static {}", self.debug_print());
         return Result::Ok(self.content.clone())
     }
 
 
     fn get_base_node(&self) -> &BaseNode {
         return &self.base_node;
+    }
+
+    fn get_base_node_mut(&mut self) -> &mut BaseNode {
+        return &mut self.base_node;
     }
 
     fn debug_name(&self) -> &str {

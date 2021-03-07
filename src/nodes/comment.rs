@@ -59,6 +59,10 @@ impl Node for CommentNode {
         return &self.base_node;
     }
 
+    fn get_base_node_mut(&mut self) -> &mut BaseNode {
+        return &mut self.base_node;
+    }
+
     fn debug_name(&self) -> &str {
         return "comment";
     }

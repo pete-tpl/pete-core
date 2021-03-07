@@ -72,7 +72,6 @@ impl Node for ExpressionNode {
     }
 
     fn render(&self, context: &RenderContext) -> RenderResult {
-        println!("RENDER expression {}", self.debug_print());
         match self.expression_node.evaluate(&context) {
             Ok(parameter) => RenderResult::Ok(parameter.as_string()),
             Err(err) => RenderResult::Err(TemplateError::create(
@@ -86,6 +85,10 @@ impl Node for ExpressionNode {
 
     fn get_base_node(&self) -> &BaseNode {
         return &self.base_node;
+    }
+
+    fn get_base_node_mut(&mut self) -> &mut BaseNode {
+        return &mut self.base_node;
     }
 
     fn debug_name(&self) -> &str {
