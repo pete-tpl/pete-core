@@ -19,6 +19,23 @@ pub struct ConditionNode {
     expressions: Vec<Box<dyn ExpressionNode>>,
 }
 
+// Parses an expression from non-parsed template
+fn parse_expression(full_template: &String, nonparsed_template: &String) -> Result<(String, usize), String> {
+    let tag_end_pos_rel = match expressions::get_end_offset(nonparsed_template, TAG_END) {
+        Some(end_pos) => end_pos,
+        None => {
+            return Err(String::from("Cannot find closing tag."));
+        }
+    };
+
+    let offset_shift = full_template.len() - nonparsed_template.len();
+    let tag_end_pos_abs = tag_end_pos_rel + offset_shift;
+    let expr_start_pos = offset_shift;
+    let expr_end_pos = tag_end_pos_abs - TAG_END.len() + 1;
+    let expr_string = full_template[expr_start_pos..expr_end_pos].to_string();
+    Ok((expr_string, tag_end_pos_abs))
+}
+
 impl ConditionNode {
     fn create() -> ConditionNode {
         ConditionNode{
@@ -37,20 +54,14 @@ impl ConditionNode {
     fn build_block_if(&mut self, context: &BuildContext, string: &String) -> NodeBuildResult {
         self.base_node.start_offset = context.offset;
         self.base_node.has_nolinebreak_beginning = &context.template_remain[TAG_START.len()+1..TAG_START.len()+2] == "-";
-        let tag_end_pos_rel = match expressions::get_end_offset(string, TAG_END) {
-            Some(end_pos) => end_pos,
-            None => {
-                return NodeBuildResult::Error(TemplateError::create(
-                    context.template.clone(),
-                    context.offset,
-                    String::from("Cannot find closing tag.")));
-            }
+        let (expr_string, tag_end_pos_abs) = match parse_expression(&context.template_remain, string) {
+            Ok(s) => s,
+            Err(s) => return NodeBuildResult::Error(TemplateError::create(
+                context.template.clone(),
+                context.offset,
+                s))
         };
-        let offset_shift = context.template_remain.len() - string.len();
-        let tag_end_pos_abs = tag_end_pos_rel + offset_shift;
-        let expr_start_pos = offset_shift;
-        let expr_end_pos = tag_end_pos_abs - TAG_END.len() + 1;
-        let expr_string = context.template_remain[expr_start_pos..expr_end_pos].to_string();
+
         match expressions::parse(String::from(expr_string)) {
             Ok(expr_node) => {
                 self.expressions.push(expr_node);
@@ -70,21 +81,13 @@ impl ConditionNode {
     }
 
     fn build_if_block_else(&mut self, context: &BuildContext, string: &String) -> NodeBuildResult {
-        let tag_end_pos_rel = match expressions::get_end_offset(string, TAG_END) {
-            Some(end_pos) => end_pos,
-            None => {
-                return NodeBuildResult::Error(TemplateError::create(
-                    context.template.clone(),
-                    context.offset,
-                    String::from("Cannot find closing tag.")));
-            }
+        let (expr_string, tag_end_pos_abs) = match parse_expression(&context.template_remain, string) {
+            Ok(s) => s,
+            Err(s) => return NodeBuildResult::Error(TemplateError::create(
+                context.template.clone(),
+                context.offset,
+                s))
         };
-        
-        let offset_shift = context.template_remain.len() - string.len();
-        let tag_end_pos_abs = tag_end_pos_rel + offset_shift;
-        let expr_start_pos = offset_shift;
-        let expr_end_pos = tag_end_pos_abs - TAG_END.len() + 1;
-        let expr_string = context.template_remain[expr_start_pos..expr_end_pos].to_string();
 
         if expr_string.trim_matches(' ').len() > 0 {
             return NodeBuildResult::Error(TemplateError::create(
