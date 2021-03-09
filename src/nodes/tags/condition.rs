@@ -6,6 +6,7 @@ use crate::expressions::nodes::{Node as ExpressionNode};
 use crate::expressions::nodes::general::literal::Literal;
 use crate::error::template_error::TemplateError;
 use crate::nodes::{BaseNode, Node, TAG_START, TAG_END};
+use crate::nodes::container::ContainerNode;
 
 const IF_KEYWORD: &str = "if";
 const ELSE_KEYWORD: &str = "else";
@@ -53,6 +54,11 @@ impl ConditionNode {
         match expressions::parse(String::from(expr_string)) {
             Ok(expr_node) => {
                 self.expressions.push(expr_node);
+                let mut container = ContainerNode::create();
+                let mut container_base_node = container.get_base_node_mut();
+                container_base_node.start_offset = context.offset + tag_end_pos_abs + 1;
+                container_base_node.end_offset = container_base_node.start_offset;
+                self.base_node.children.push(Box::from(container));
                 NodeBuildResult::NestedNode(tag_end_pos_abs)
             },
             Err(err) => NodeBuildResult::Error(TemplateError::create(
@@ -89,6 +95,11 @@ impl ConditionNode {
         }
 
         self.expressions.push(Box::from(Literal::new_from_bool(true)));
+        let mut container = ContainerNode::create();
+        let mut container_base_node = container.get_base_node_mut();
+        container_base_node.start_offset = context.offset + tag_end_pos_abs + 1;
+        container_base_node.end_offset = container_base_node.start_offset;
+        self.base_node.children.push(Box::from(container));
         NodeBuildResult::NestedNode(tag_end_pos_abs)
     }
 
@@ -131,7 +142,14 @@ impl ConditionNode {
 // Returns two strings: a keyword (if, elseif, etc) and a remain AFTER keyword
 // e.g. get_keyword("{% if 1 + 1 %}") => ("if", " 1 + 1 %}")
 fn get_keyword(string: &String) -> (&str, String) {
-    let s = string.trim_start_matches(|c| !char::is_alphabetic(c));
+    let s = match string.strip_prefix(TAG_START) {
+        Some(m) => m,
+        None => return ("", string.clone()),
+    };
+    let s = match s.strip_prefix('-') {
+        Some(m) => m,
+        None => s,
+    }.trim_start_matches(' ');
     let endpos = match s.find(|c| !char::is_alphabetic(c)) {
         Some(p) => p,
         None => s.len() - 1,
@@ -141,14 +159,19 @@ fn get_keyword(string: &String) -> (&str, String) {
 
 impl Node for ConditionNode {
     fn add_child(&mut self, child: Box<dyn Node>) {
-        self.base_node.children.push(child);
+        match self.base_node.children.last_mut() {
+            None => {},
+            Some(c) => {
+                c.get_base_node_mut().set_end_offset(child.get_base_node().end_offset);
+                c.add_child(child);
+            },
+        }
     }
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
         let (keyword, remain) = get_keyword(&context.template_remain);
         match keyword {
-            IF_KEYWORD => self.build_block_if(context, &remain),
-            ELSEIF_KEYWORD => self.build_block_if(context, &remain),
+            IF_KEYWORD|ELSEIF_KEYWORD => self.build_block_if(context, &remain),
             ELSE_KEYWORD => self.build_if_block_else(context, &remain),
             ENDIF_KEYWORD => self.build_block_end(context),
             _ => NodeBuildResult::Error(TemplateError::create(

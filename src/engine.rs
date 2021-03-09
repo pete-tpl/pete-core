@@ -123,6 +123,7 @@ impl Engine {
         Ok(parent_node)
     } 
 
+    // TODO: replace string template with borrowed string
     pub fn render(&self, template: String, parameters: VariableStore) -> RenderResult {
         let parent_node = self.build(&template)?;
         let mut render_context = RenderContext::new();
@@ -132,6 +133,7 @@ impl Engine {
         parent_node.render(&render_context)
     }
 
+    // TODO: replace string template with borrowed string
     pub fn debug_print_structure(&self, template: String) -> RenderResult {
         let parent_node = self.build(&template)?;
         RenderResult::Ok(parent_node.debug_print_structure(0))
