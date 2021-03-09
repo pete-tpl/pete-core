@@ -1,7 +1,7 @@
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
-use crate::nodes::{BaseNode, Node, COMMENT_START, EXPRESSION_START, TAG_START};
+use crate::nodes::{BaseNode, Node, COMMENT_START, DYNAMIC_BLOCK_STARTS, EXPRESSION_START, TAG_START};
 
 pub struct StaticNode {
     base_node: BaseNode,
@@ -31,14 +31,18 @@ impl Node for StaticNode {
     }
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
-        let mut end_pos = context.template_remain.find(COMMENT_START);
-        if end_pos.is_none() {
-            end_pos = context.template_remain.find(TAG_START);
+        let mut end_pos = context.template_remain.len() - 1;
+        for start_token in &DYNAMIC_BLOCK_STARTS {
+            match context.template_remain.find(start_token) {
+                Some(p) => {
+                    if p < end_pos {
+                        end_pos = p - 1;
+                    }
+                },
+                None => {},
+            }
         }
-        if end_pos.is_none() {
-            end_pos = context.template_remain.find(EXPRESSION_START);
-        }
-        let end_pos = (if end_pos.is_none() { context.template_remain.len() } else { end_pos.unwrap() }) - 1;
+
         self.base_node.start_offset = context.offset;
         self.base_node.end_offset = context.offset + end_pos;
         self.content = context.template_remain[0..end_pos+1].to_string();
