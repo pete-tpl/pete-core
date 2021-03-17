@@ -35,7 +35,8 @@ pub trait Node {
 
     fn debug_name(&self) -> &str;
     fn debug_print(&self) -> String {
-        return format!("[{} - {}] {}", self.get_base_node().start_offset, self.get_base_node().end_offset ,self.debug_name())
+        return format!("[{} - {}] {} <{}/{}>", self.get_base_node().start_offset, self.get_base_node().end_offset , 
+        self.debug_name(), self.has_nolinebreak_beginning(), self.has_nolinebreak_end())
     }
     
     fn debug_print_structure(&self, nesting_level: usize) -> String {

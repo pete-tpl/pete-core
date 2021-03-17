@@ -26,3 +26,15 @@ fn test_conditions_simple() {
         Err(e) => panic!("Error: {}", &e.message)
     }
 }
+
+#[test]
+fn test_conditions_nolinebreak() {
+    let engine = Engine::new();
+    let mut variables = VariableStore::new();
+    variables.insert(String::from("myvar"), Variable::new_from_int(2));
+    let (input, output) = read_test_files("tests/templates/conditions/nolinebreak.input.twig", "tests/templates/conditions/nolinebreak.output.txt");
+    match engine.render(input, variables) {
+        Ok(string) => assert_eq!(string, output),
+        Err(e) => panic!("Error: {}", &e.message)
+    }
+}

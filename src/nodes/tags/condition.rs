@@ -19,21 +19,39 @@ pub struct ConditionNode {
     expressions: Vec<Box<dyn ExpressionNode>>,
 }
 
-// Parses an expression from non-parsed template
-fn parse_expression(full_template: &String, nonparsed_template: &String) -> Result<(String, usize), String> {
+/// Parses an expression from non-parsed template
+/// 
+/// Returns:
+/// - an Expression string
+/// - end offset of the tag
+/// - if expression as a no linebreak character at the end
+/// 
+/// # Examples
+/// 
+/// ```ignore
+/// assert_eq!(Ok(("2+3 ", 11, false)), parse_expression("{% if 2+3 %}A{%endif%}", " 2+3 %}A{%endif%}"));
+/// assert_eq!(Ok(("2+3 ", 12, true)), parse_expression("{% if 2+3 -%}A{%endif%}", " 2+3 -%}A{%endif%}"));
+/// ```
+fn parse_expression(full_template: &String, nonparsed_template: &String) -> Result<(String, usize, bool), String> {
     let tag_end_pos_rel = match expressions::get_end_offset(nonparsed_template, TAG_END) {
         Some(end_pos) => end_pos,
         None => {
             return Err(String::from("Cannot find closing tag."));
         }
     };
-
     let offset_shift = full_template.len() - nonparsed_template.len();
     let tag_end_pos_abs = tag_end_pos_rel + offset_shift;
     let expr_start_pos = offset_shift;
-    let expr_end_pos = tag_end_pos_abs - TAG_END.len() + 1;
+    let (expr_end_pos, no_linebreak_end) = {
+        let end_pos = tag_end_pos_abs - TAG_END.len();
+        let str_before_end_tag = nonparsed_template[..tag_end_pos_rel - TAG_END.len() + 1].to_string();
+        match str_before_end_tag.ends_with('-') {
+            true => (end_pos - 1, true),
+            false => (end_pos, false),
+        }
+    };
     let expr_string = full_template[expr_start_pos..expr_end_pos].to_string();
-    Ok((expr_string, tag_end_pos_abs))
+    Ok((expr_string, tag_end_pos_abs, no_linebreak_end))
 }
 
 impl ConditionNode {
@@ -51,10 +69,10 @@ impl ConditionNode {
         }
     }
 
-    fn build_block_if(&mut self, context: &BuildContext, string: &String) -> NodeBuildResult {
+    fn build_block_if(&mut self, context: &BuildContext, string: &String, has_nolinebreak_beginning: bool) -> NodeBuildResult {
+        self.base_node.has_nolinebreak_beginning = has_nolinebreak_beginning;
         self.base_node.start_offset = context.offset;
-        self.base_node.has_nolinebreak_beginning = &context.template_remain[TAG_START.len()+1..TAG_START.len()+2] == "-";
-        let (expr_string, tag_end_pos_abs) = match parse_expression(&context.template_remain, string) {
+        let (expr_string, tag_end_pos_abs, has_nolinebreak_end) = match parse_expression(&context.template_remain, string) {
             Ok(s) => s,
             Err(s) => return NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
@@ -67,6 +85,8 @@ impl ConditionNode {
                 self.expressions.push(expr_node);
                 let mut container = ContainerNode::create();
                 let mut container_base_node = container.get_base_node_mut();
+                container_base_node.has_nolinebreak_beginning = has_nolinebreak_beginning;
+                container_base_node.has_nolinebreak_end = has_nolinebreak_end;
                 container_base_node.start_offset = context.offset + tag_end_pos_abs + 1;
                 container_base_node.end_offset = container_base_node.start_offset;
                 self.base_node.children.push(Box::from(container));
@@ -80,8 +100,8 @@ impl ConditionNode {
         }
     }
 
-    fn build_if_block_else(&mut self, context: &BuildContext, string: &String) -> NodeBuildResult {
-        let (expr_string, tag_end_pos_abs) = match parse_expression(&context.template_remain, string) {
+    fn build_if_block_else(&mut self, context: &BuildContext, string: &String, has_nolinebreak_beginning: bool) -> NodeBuildResult {
+        let (expr_string, tag_end_pos_abs, has_nolinebreak_end) = match parse_expression(&context.template_remain, string) {
             Ok(s) => s,
             Err(s) => return NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
@@ -89,7 +109,13 @@ impl ConditionNode {
                 s))
         };
 
-        if expr_string.trim_matches(' ').len() > 0 {
+        let expr_remain = expr_string.trim_matches(' ');
+        let expr_remain = match expr_remain.strip_prefix('-') {
+            Some(s) => s,
+            None => expr_remain,
+        };
+
+        if expr_remain.len() > 0 {
             return NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
                 context.offset,
@@ -102,14 +128,19 @@ impl ConditionNode {
         let mut container_base_node = container.get_base_node_mut();
         container_base_node.start_offset = context.offset + tag_end_pos_abs + 1;
         container_base_node.end_offset = container_base_node.start_offset;
+        container_base_node.has_nolinebreak_beginning = has_nolinebreak_beginning;
+        container_base_node.has_nolinebreak_end = has_nolinebreak_end;
         self.base_node.children.push(Box::from(container));
         NodeBuildResult::NestedNode(tag_end_pos_abs)
     }
 
-    fn build_block_end(&mut self, context: &BuildContext) -> NodeBuildResult {
+    fn build_block_end(&mut self, context: &BuildContext, has_nolinebreak_beginning: bool) -> NodeBuildResult {
         match expressions::get_end_offset(&context.template_remain, TAG_END) {
             Some(end_pos) => {
+                let has_nolinebreak_end = context.template_remain[..end_pos-TAG_END.len()+1].ends_with('-');
                 self.base_node.end_offset = context.offset + end_pos;
+                self.base_node.has_nolinebreak_end = has_nolinebreak_end;
+
                 NodeBuildResult::EndOfNode(end_pos)
             },
             None => NodeBuildResult::Error(TemplateError::create(
@@ -142,22 +173,32 @@ impl ConditionNode {
     }
 }
 
-// Returns two strings: a keyword (if, elseif, etc) and a remain AFTER keyword
-// e.g. get_keyword("{% if 1 + 1 %}") => ("if", " 1 + 1 %}")
-fn get_keyword(string: &String) -> (&str, String) {
+/// Returns:
+/// - a keyword (if, elseif, etc)
+/// - a remain AFTER keyword
+/// - if the parsed tag has nolinebreak char
+/// 
+/// # Examples
+/// 
+/// ```ignore
+/// assert_eq!(get_keyword("{% if 1 + 1 %}"), ("if", " 1 + 1 %}", false));
+/// assert_eq!(get_keyword("{%- if 1 + 1 %}"), ("if", " 1 + 1 %}", true));
+/// ```
+fn get_keyword(string: &String) -> (&str, String, bool) {
     let s = match string.strip_prefix(TAG_START) {
         Some(m) => m,
-        None => return ("", string.clone()),
+        None => return ("", string.clone(), false),
     };
-    let s = match s.strip_prefix('-') {
-        Some(m) => m,
-        None => s,
-    }.trim_start_matches(' ');
+    let (s, has_nolinebreak_beginning) = match s.strip_prefix('-') {
+        Some(m) => (m, true),
+        None => (s, false),
+    };
+    let s =  s.trim_start_matches(' ');
     let endpos = match s.find(|c| !char::is_alphabetic(c)) {
         Some(p) => p,
         None => s.len() - 1,
     };
-    (&s[..endpos], String::from(&s[endpos..]))
+    (&s[..endpos], String::from(&s[endpos..]), has_nolinebreak_beginning)
 }
 
 impl Node for ConditionNode {
@@ -172,11 +213,11 @@ impl Node for ConditionNode {
     }
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
-        let (keyword, remain) = get_keyword(&context.template_remain);
+        let (keyword, remain, has_nolinebreak_beginning) = get_keyword(&context.template_remain);
         match keyword {
-            IF_KEYWORD|ELSEIF_KEYWORD => self.build_block_if(context, &remain),
-            ELSE_KEYWORD => self.build_if_block_else(context, &remain),
-            ENDIF_KEYWORD => self.build_block_end(context),
+            IF_KEYWORD|ELSEIF_KEYWORD => self.build_block_if(context, &remain, has_nolinebreak_beginning),
+            ELSE_KEYWORD => self.build_if_block_else(context, &remain, has_nolinebreak_beginning),
+            ENDIF_KEYWORD => self.build_block_end(context, has_nolinebreak_beginning),
             _ => NodeBuildResult::Error(TemplateError::create(
                 context.template.clone(),
                 context.offset,
