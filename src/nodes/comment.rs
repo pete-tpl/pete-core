@@ -4,6 +4,9 @@ use crate::engine::{NodeBuildResult, RenderResult};
 use crate::error::template_error::TemplateError;
 use crate::nodes::{BaseNode, Node, COMMENT_START, COMMENT_END};
 
+use derive_macro::HasBaseNode;
+
+#[derive(HasBaseNode)]
 pub struct CommentNode {
     base_node: BaseNode,
 }
@@ -53,14 +56,6 @@ impl Node for CommentNode {
 
     fn render(&self, _context: &RenderContext) -> RenderResult {
         RenderResult::Ok(String::new())
-    }
-
-    fn get_base_node(&self) -> &BaseNode {
-        return &self.base_node;
-    }
-
-    fn get_base_node_mut(&mut self) -> &mut BaseNode {
-        return &mut self.base_node;
     }
 
     fn debug_name(&self) -> &str {

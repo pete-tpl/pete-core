@@ -3,6 +3,9 @@ use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
 use crate::nodes::{BaseNode, Node};
 
+use derive_macro::HasBaseNode;
+
+#[derive(HasBaseNode)]
 pub struct ContainerNode {
     base_node: BaseNode,
 }
@@ -59,15 +62,6 @@ impl Node for ContainerNode {
         }
 
         RenderResult::Ok(result)
-    }
-
-
-    fn get_base_node(&self) -> &BaseNode {
-        return &self.base_node;
-    }
-
-    fn get_base_node_mut(&mut self) -> &mut BaseNode {
-        return &mut self.base_node;
     }
 
     fn debug_name(&self) -> &str {

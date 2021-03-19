@@ -7,6 +7,9 @@ use crate::expressions::nodes as expression_nodes;
 use crate::expressions::nodes::general::literal::Literal;
 use crate::nodes::{BaseNode, Node, EXPRESSION_START, EXPRESSION_END};
 
+use derive_macro::HasBaseNode;
+
+#[derive(HasBaseNode)]
 pub struct ExpressionNode {
     base_node: BaseNode,
     build_context: BuildContext,
@@ -81,14 +84,6 @@ impl Node for ExpressionNode {
             )),
         }
         
-    }
-
-    fn get_base_node(&self) -> &BaseNode {
-        return &self.base_node;
-    }
-
-    fn get_base_node_mut(&mut self) -> &mut BaseNode {
-        return &mut self.base_node;
     }
 
     fn debug_name(&self) -> &str {

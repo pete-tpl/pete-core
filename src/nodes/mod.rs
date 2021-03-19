@@ -16,7 +16,7 @@ const TAG_START: &str = "{%";
 const TAG_END: &str = "%}";
 const DYNAMIC_BLOCK_STARTS: [&str; 3] = [EXPRESSION_START, TAG_START, COMMENT_START];
 
-pub trait Node {
+pub trait Node: HasBaseNodeTrait {
     fn add_child(&mut self, child: Box<dyn Node>);
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult;
     fn is_continuation(&self, context: &BuildContext) -> bool;
@@ -29,9 +29,6 @@ pub trait Node {
     fn has_nolinebreak_beginning(&self) -> bool {
         self.get_base_node().has_nolinebreak_beginning
     }
-
-    fn get_base_node(&self) -> &BaseNode;
-    fn get_base_node_mut(&mut self) -> &mut BaseNode;
 
     fn debug_name(&self) -> &str;
     fn debug_print(&self) -> String {
@@ -55,6 +52,11 @@ pub trait Node {
         };
         self.get_base_node_mut().set_end_offset(end_offset);
     }
+}
+
+pub trait HasBaseNodeTrait {
+    fn get_base_node(&self) -> &BaseNode;
+    fn get_base_node_mut(&mut self) -> &mut BaseNode;
 }
 
 pub struct BaseNode {

@@ -8,11 +8,14 @@ use crate::error::template_error::TemplateError;
 use crate::nodes::{BaseNode, Node, TAG_START, TAG_END};
 use crate::nodes::container::ContainerNode;
 
+use derive_macro::HasBaseNode;
+
 const IF_KEYWORD: &str = "if";
 const ELSE_KEYWORD: &str = "else";
 const ELSEIF_KEYWORD: &str = "elseif";
 const ENDIF_KEYWORD: &str = "endif";
 
+#[derive(HasBaseNode)]
 pub struct ConditionNode {
     base_node: BaseNode,
     // Indexes of expressions match to indexes of children nodes
@@ -252,14 +255,6 @@ impl Node for ConditionNode {
             }
         }
         RenderResult::Ok(String::new())
-    }
-
-    fn get_base_node(&self) -> &BaseNode {
-        return &self.base_node;
-    }
-
-    fn get_base_node_mut(&mut self) -> &mut BaseNode {
-        return &mut self.base_node;
     }
 
     fn debug_name(&self) -> &str {

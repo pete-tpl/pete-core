@@ -3,6 +3,9 @@ use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
 use crate::nodes::{BaseNode, Node, COMMENT_START, DYNAMIC_BLOCK_STARTS, EXPRESSION_START, TAG_START};
 
+use derive_macro::HasBaseNode;
+
+#[derive(HasBaseNode)]
 pub struct StaticNode {
     base_node: BaseNode,
     content: String,
@@ -55,15 +58,6 @@ impl Node for StaticNode {
 
     fn render(&self, _context: &RenderContext) -> RenderResult {
         return Result::Ok(self.content.clone())
-    }
-
-
-    fn get_base_node(&self) -> &BaseNode {
-        return &self.base_node;
-    }
-
-    fn get_base_node_mut(&mut self) -> &mut BaseNode {
-        return &mut self.base_node;
     }
 
     fn debug_name(&self) -> &str {
