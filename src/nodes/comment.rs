@@ -1,6 +1,6 @@
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
-use crate::engine::{NodeBuildResult, RenderResult};
+use crate::engine::{NodeBuildData, NodeBuildResult, RenderResult};
 use crate::error::template_error::TemplateError;
 use crate::nodes::{BaseNode, Node, COMMENT_START, COMMENT_END};
 
@@ -36,7 +36,7 @@ impl Node for CommentNode {
         self.base_node.has_nolinebreak_beginning = context.template_remain[2..3].to_string() == "-";
         let end_pos = context.template_remain.find(COMMENT_END);
         match end_pos {
-            None => NodeBuildResult::Error(TemplateError::create(
+            None => Err(TemplateError::create(
                 context.template.clone(),
                 context.offset,
                 String::from("Comment is not closed"))),
@@ -45,7 +45,7 @@ impl Node for CommentNode {
                 self.base_node.end_offset = context.offset + end_pos_with_tag;
                 self.base_node.has_nolinebreak_end = context.template_remain[end_pos-1..end_pos].to_string() == "-";
                 self.base_node.start_offset = context.offset;
-                NodeBuildResult::EndOfNode(end_pos_with_tag)
+                Ok(NodeBuildData::new(end_pos_with_tag, false, self.base_node.has_nolinebreak_end))
             }
         }
     }
@@ -87,8 +87,9 @@ mod tests {
         context.offset = 7;
         let result = node.build(&context);
         match result {
-            NodeBuildResult::EndOfNode(offset) => {
-                assert_eq!(offset, 20);
+            Ok(data) => {
+                assert_eq!(data.end_offset, 20);
+                assert_eq!(data.is_nesting_started, false);
             },
             _ => panic!("Failed to build a node")
         }
@@ -108,8 +109,9 @@ mod tests {
         context.template_remain = String::from("{#- Here is comment -#}World!");
         context.offset = 21;
         match node.build(&context) {
-            NodeBuildResult::EndOfNode(offset) => {
-                assert_eq!(offset, 22);
+            Ok(data) => {
+                assert_eq!(data.end_offset, 22);
+                assert_eq!(data.is_nesting_started, false);
                 assert_eq!(node.base_node.start_offset, 21);
                 assert_eq!(node.base_node.end_offset, 43);
                 assert_eq!(node.base_node.has_nolinebreak_beginning, true);
@@ -123,8 +125,9 @@ mod tests {
         context.template_remain = String::from("{# Here is comment -#}World!");
         context.offset = 21;
         match node.build(&context) {
-            NodeBuildResult::EndOfNode(offset) => {
-                assert_eq!(offset, 21);
+            Ok(data) => {
+                assert_eq!(data.end_offset, 21);
+                assert_eq!(data.is_nesting_started, false);
                 assert_eq!(node.base_node.start_offset, 21);
                 assert_eq!(node.base_node.end_offset, 42);
                 assert_eq!(node.base_node.has_nolinebreak_beginning, false);
@@ -138,8 +141,9 @@ mod tests {
         context.template_remain = String::from("{#- Here is comment #}World!");
         context.offset = 21;
         match node.build(&context) {
-            NodeBuildResult::EndOfNode(offset) => {
-                assert_eq!(offset, 21);
+            Ok(data) => {
+                assert_eq!(data.end_offset, 21);
+                assert_eq!(data.is_nesting_started, false);
                 assert_eq!(node.base_node.start_offset, 21);
                 assert_eq!(node.base_node.end_offset, 42);
                 assert_eq!(node.base_node.has_nolinebreak_beginning, true);
@@ -153,8 +157,9 @@ mod tests {
         context.template_remain = String::from("{# Here is comment #}World!");
         context.offset = 21;
         match node.build(&context) {
-            NodeBuildResult::EndOfNode(offset) => {
-                assert_eq!(offset, 20);
+            Ok(data) => {
+                assert_eq!(data.end_offset, 20);
+                assert_eq!(data.is_nesting_started, false);
                 assert_eq!(node.base_node.start_offset, 21);
                 assert_eq!(node.base_node.end_offset, 41);
                 assert_eq!(node.base_node.has_nolinebreak_beginning, false);

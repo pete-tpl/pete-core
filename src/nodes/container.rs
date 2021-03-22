@@ -1,6 +1,6 @@
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
-use crate::engine::{NodeBuildResult, RenderResult};
+use crate::engine::{NodeBuildData, NodeBuildResult, RenderResult};
 use crate::nodes::{BaseNode, Node};
 
 use derive_macro::HasBaseNode;
@@ -25,7 +25,7 @@ impl Node for ContainerNode {
     }
 
     fn build(&mut self, _context: &BuildContext) -> NodeBuildResult {
-        NodeBuildResult::NestedNode(0)
+        Ok(NodeBuildData::new(0, false, false))
     }
 
     fn is_continuation(&self, _context: &BuildContext) -> bool {
@@ -54,7 +54,7 @@ impl Node for ContainerNode {
             result += child_render_result.as_str();
             previous_no_linebreak_end = child.has_nolinebreak_end();
         }
-        if self.base_node.has_nolinebreak_end {
+        if self.base_node.has_nolinebreak_end { // TODO: probably double assertion here and in loop
             result = match result.strip_suffix("\n") {
                 Some(r) => String::from(r),
                 None => result

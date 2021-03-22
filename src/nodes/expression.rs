@@ -1,6 +1,6 @@
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
-use crate::engine::{NodeBuildResult, RenderResult};
+use crate::engine::{NodeBuildData, NodeBuildResult, RenderResult};
 use crate::error::template_error::TemplateError;
 use crate::expressions as expression_mod;
 use crate::expressions::nodes as expression_nodes;
@@ -42,32 +42,29 @@ impl Node for ExpressionNode {
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
         self.base_node.has_nolinebreak_beginning = context.template_remain[2..3].to_string() == "-";
         self.build_context = context.clone();
-        match expression_mod::get_end_offset(&context.template_remain, EXPRESSION_END) {
-            None => NodeBuildResult::Error(TemplateError::create(
+        let end_pos_with_tag = match expression_mod::get_end_offset(&context.template_remain, EXPRESSION_END) {
+            None => Err(TemplateError::create(
                 context.template.clone(),
                 context.offset,
                 String::from("Expression is not closed"))),
-            Some(end_pos_with_tag) => {
-                let end_pos = end_pos_with_tag - EXPRESSION_END.len();
-                self.base_node.end_offset = context.offset + end_pos_with_tag;
-                self.base_node.has_nolinebreak_end = context.template_remain[end_pos-1..end_pos].to_string() == "-";
-                self.base_node.start_offset = context.offset;
-                let expression_string = context.template_remain[EXPRESSION_START.len()..end_pos].to_string();
-                match expression_mod::parse(expression_string) {
-                    Ok(expr_node) => {
-                        self.expression_node = expr_node;
-                    },
-                    Err(err) => {
-                        return NodeBuildResult::Error(TemplateError::create(
-                            self.build_context.template.clone(),
-                            self.build_context.offset,
-                            String::from(format!("Failed to build an expression: {}", err.message))
-                        ));
-                    }
-                };
-                NodeBuildResult::EndOfNode(end_pos_with_tag)
-            }
-        }
+            Some(pos) => Ok(pos),
+        }?;
+
+        let end_pos = end_pos_with_tag - EXPRESSION_END.len();
+        self.base_node.end_offset = context.offset + end_pos_with_tag;
+        self.base_node.has_nolinebreak_end = context.template_remain[end_pos-1..end_pos].to_string() == "-";
+        self.base_node.start_offset = context.offset;
+        let expression_string = context.template_remain[EXPRESSION_START.len()..end_pos].to_string();
+        let expr_node = match expression_mod::parse(expression_string) {
+            Ok(n) => Ok(n),
+            Err(err) => Err(TemplateError::create(
+                self.build_context.template.clone(),
+                self.build_context.offset,
+                String::from(format!("Failed to build an expression: {}", err.message))
+            )),
+        }?;
+        self.expression_node = expr_node;
+        Ok(NodeBuildData::new(end_pos_with_tag, false, self.base_node.has_nolinebreak_end))
     }
 
     fn is_continuation(&self, _context: &BuildContext) -> bool {

@@ -1,6 +1,6 @@
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
-use crate::engine::{NodeBuildResult, RenderResult};
+use crate::engine::{NodeBuildResult, NodeBuildData, RenderResult};
 use crate::expressions;
 use crate::expressions::nodes::{Node as ExpressionNode};
 use crate::expressions::nodes::general::literal::Literal;
@@ -77,7 +77,7 @@ impl ConditionNode {
         self.base_node.start_offset = context.offset;
         let (expr_string, tag_end_pos_abs, has_nolinebreak_end) = match parse_expression(&context.template_remain, string) {
             Ok(s) => s,
-            Err(s) => return NodeBuildResult::Error(TemplateError::create(
+            Err(s) => return Err(TemplateError::create(
                 context.template.clone(),
                 context.offset,
                 s))
@@ -93,9 +93,9 @@ impl ConditionNode {
                 container_base_node.start_offset = context.offset + tag_end_pos_abs + 1;
                 container_base_node.end_offset = container_base_node.start_offset;
                 self.base_node.children.push(Box::from(container));
-                NodeBuildResult::NestedNode(tag_end_pos_abs)
+                Ok(NodeBuildData::new(tag_end_pos_abs, true, has_nolinebreak_end))
             },
-            Err(err) => NodeBuildResult::Error(TemplateError::create(
+            Err(err) => Err(TemplateError::create(
                 context.template.clone(),
                 context.offset,
                 String::from(format!("An error in the Condition Node. Failed to evaluate an expression: {}", err.message))
@@ -106,7 +106,7 @@ impl ConditionNode {
     fn build_if_block_else(&mut self, context: &BuildContext, string: &String, has_nolinebreak_beginning: bool) -> NodeBuildResult {
         let (expr_string, tag_end_pos_abs, has_nolinebreak_end) = match parse_expression(&context.template_remain, string) {
             Ok(s) => s,
-            Err(s) => return NodeBuildResult::Error(TemplateError::create(
+            Err(s) => return Err(TemplateError::create(
                 context.template.clone(),
                 context.offset,
                 s))
@@ -119,7 +119,7 @@ impl ConditionNode {
         };
 
         if expr_remain.len() > 0 {
-            return NodeBuildResult::Error(TemplateError::create(
+            return Err(TemplateError::create(
                 context.template.clone(),
                 context.offset,
                 String::from(format!("An error in the Condition Node. Unexpected characters in ELSE block: {}", expr_string))
@@ -134,7 +134,7 @@ impl ConditionNode {
         container_base_node.has_nolinebreak_beginning = has_nolinebreak_beginning;
         container_base_node.has_nolinebreak_end = has_nolinebreak_end;
         self.base_node.children.push(Box::from(container));
-        NodeBuildResult::NestedNode(tag_end_pos_abs)
+        Ok(NodeBuildData::new(tag_end_pos_abs, true, has_nolinebreak_end))
     }
 
     fn build_block_end(&mut self, context: &BuildContext, has_nolinebreak_beginning: bool) -> NodeBuildResult {
@@ -142,11 +142,9 @@ impl ConditionNode {
             Some(end_pos) => {
                 let has_nolinebreak_end = context.template_remain[..end_pos-TAG_END.len()+1].ends_with('-');
                 self.base_node.end_offset = context.offset + end_pos;
-                self.base_node.has_nolinebreak_end = has_nolinebreak_end;
-
-                NodeBuildResult::EndOfNode(end_pos)
+                Ok(NodeBuildData::new(end_pos, false, has_nolinebreak_end))
             },
-            None => NodeBuildResult::Error(TemplateError::create(
+            None => Err(TemplateError::create(
                 context.template.clone(),
                 context.offset,
                 String::from("Cannot find closing tag."))),
@@ -221,7 +219,7 @@ impl Node for ConditionNode {
             IF_KEYWORD|ELSEIF_KEYWORD => self.build_block_if(context, &remain, has_nolinebreak_beginning),
             ELSE_KEYWORD => self.build_if_block_else(context, &remain, has_nolinebreak_beginning),
             ENDIF_KEYWORD => self.build_block_end(context, has_nolinebreak_beginning),
-            _ => NodeBuildResult::Error(TemplateError::create(
+            _ => Err(TemplateError::create(
                 context.template.clone(),
                 context.offset,
                 String::from("Unknown keyword. Expected: (if|else|elseif|endif)"))),
@@ -293,8 +291,9 @@ mod tests {
         context.template_remain = String::from("{% if 4+2 %}test{% endif %}");
         let result = node.build(&context);
         match result {
-            NodeBuildResult::NestedNode(offset) => {
-                assert_eq!(offset, 11);
+            Ok(data) => {
+                assert_eq!(data.end_offset, 11);
+                assert_eq!(data.is_nesting_started, true);
             },
             _ => panic!("Failed to build a node")
         }
@@ -303,8 +302,9 @@ mod tests {
 
         context.template_remain = String::from("{% endif %}");
         match node.build(&context) {
-            NodeBuildResult::EndOfNode(offset) => {
-                assert_eq!(offset, 10);
+            Ok(data) => {
+                assert_eq!(data.end_offset, 10);
+                assert_eq!(data.is_nesting_started, false);
             },
             _ => panic!("Failed to close a node")
         }
@@ -330,11 +330,11 @@ mod tests {
 
         let result = node.build(&context);
         match result {
-            NodeBuildResult::NestedNode(offset) => {
-                assert_eq!(offset, 17);
+            Ok(data) => {
+                assert_eq!(data.end_offset, 17);
+                assert_eq!(data.is_nesting_started, true);
             },
-            NodeBuildResult::Error(e) => panic!("Failed to build a node {}", e.message.clone()),
-            _ => {}
+            Err(e) => panic!("Failed to build a node {}", e.message.clone()),
         };
     }
 
@@ -349,11 +349,11 @@ mod tests {
 
         let result = node.build(&context);
         match result {
-            NodeBuildResult::NestedNode(offset) => {
-                assert_eq!(offset, 9);
+            Ok(data) => {
+                assert_eq!(data.end_offset, 9);
+                assert_eq!(data.is_nesting_started, true);
             },
-            NodeBuildResult::Error(e) => panic!("Failed to build a node {}", e.message.clone()),
-            _ => {}
+            Err(e) => panic!("Failed to build a node {}", e.message.clone()),
         };
     }
 }

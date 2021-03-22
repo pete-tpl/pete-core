@@ -1,6 +1,6 @@
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
-use crate::engine::{NodeBuildResult, RenderResult};
+use crate::engine::{NodeBuildData, NodeBuildResult, RenderResult};
 use crate::nodes::{BaseNode, Node, COMMENT_START, DYNAMIC_BLOCK_STARTS, EXPRESSION_START, TAG_START};
 
 use derive_macro::HasBaseNode;
@@ -49,7 +49,7 @@ impl Node for StaticNode {
         self.base_node.start_offset = context.offset;
         self.base_node.end_offset = context.offset + end_pos;
         self.content = context.template_remain[0..end_pos+1].to_string();
-        NodeBuildResult::EndOfNode(end_pos)
+        Ok(NodeBuildData::new(end_pos, false, false))
     }
 
     fn is_continuation(&self, _context: &BuildContext) -> bool {
@@ -57,7 +57,7 @@ impl Node for StaticNode {
     }
 
     fn render(&self, _context: &RenderContext) -> RenderResult {
-        return Result::Ok(self.content.clone())
+        Result::Ok(self.content.clone())
     }
 
     fn debug_name(&self) -> &str {
@@ -89,8 +89,9 @@ mod tests {
         context.template_remain = String::from("Hello, World!");
         let result = node.build(&context);
         match result {
-            NodeBuildResult::EndOfNode(offset) => {
-                assert_eq!(offset, 12);
+            Ok(data) => {
+                assert_eq!(data.end_offset, 12);
+                assert_eq!(data.is_nesting_started, false);
             },
             _ => panic!("Failed to build a node")
         }

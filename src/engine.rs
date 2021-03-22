@@ -20,14 +20,26 @@ const NODE_CREATORS: [NodeCreator; 4] = [
 
 pub struct Engine {}
 
-pub enum NodeBuildResult {
+pub struct NodeBuildData {
     // end position of node. Relative to start of node.
     // does NOT consider the current offset from context
-    EndOfNode(usize),
-    NestedNode(usize), // last character before nested node
-    Error(TemplateError),
+    pub end_offset: usize,
+    pub is_nesting_started: bool,
+    // if true, the next node will have a no linebreak in beginning
+    pub is_nolinebreak_next_node: bool,
 }
 
+impl NodeBuildData {
+    pub fn new(end_offset: usize, is_nesting_started: bool, is_nolinebreak_next_node: bool) -> NodeBuildData {
+        NodeBuildData {
+            end_offset: end_offset,
+            is_nesting_started: is_nesting_started,
+            is_nolinebreak_next_node: is_nolinebreak_next_node,
+        }
+    }
+}
+
+pub type NodeBuildResult = Result<NodeBuildData, TemplateError>;
 pub type RenderResult = Result<String, TemplateError>;
 
 impl Engine {
@@ -47,62 +59,55 @@ impl Engine {
 
     fn build_continuation(&self, build_context: &mut BuildContext,
                           nodes_stack: &mut Vec<Box<dyn Node>>, mut parent_node: Box<dyn Node>)
-                          -> Result<Box<dyn Node>, TemplateError> {
-        match parent_node.build(&build_context) {
-            NodeBuildResult::EndOfNode(offset) => {
-                match nodes_stack.pop() {
-                    Some(mut upper_parent_node) => {
-                        upper_parent_node.add_child(parent_node);
-                        build_context.apply_offset(offset);
-                        Ok(upper_parent_node)
-                    },
-                    None => Err(TemplateError::create(
-                            build_context.template.clone(),
-                            build_context.offset,
-                            String::from("Unexpected end of node stack.")))
-                }
-            },
-            NodeBuildResult::Error(err) => Err(err),
-            NodeBuildResult::NestedNode(offset) => {
-                build_context.apply_offset(offset);
-                Ok(parent_node)
-            }
-        }
+                          -> Result<(Box<dyn Node>, bool), TemplateError> {
+        let data = parent_node.build(&build_context)?;
+        let node = if data.is_nesting_started {
+            build_context.apply_offset(data.end_offset); // TODO: duplicate? See below
+            parent_node
+        } else {
+            match nodes_stack.pop() {
+                Some(mut upper_parent_node) => {
+                    upper_parent_node.add_child(parent_node);
+                    build_context.apply_offset(data.end_offset);  // TODO: duplicate? See above
+                    Ok(upper_parent_node)
+                },
+                None => Err(TemplateError::create(
+                        build_context.template.clone(),
+                        build_context.offset,
+                        String::from("Unexpected end of node stack.")))
+            }?
+        };
+        Ok((node, data.is_nolinebreak_next_node))
     }
 
     fn build_new_block(&self, build_context: &mut BuildContext,
                        nodes_stack: &mut Vec<Box<dyn Node>>, mut parent_node: Box<dyn Node>)
-                       -> Result<Box<dyn Node>, TemplateError> {
+                       -> Result<(Box<dyn Node>, bool), TemplateError> {
         let mut parsed_node = match self.parse_node(&build_context) {
-            Some(n) => n,
-            None => {
-                return Err(TemplateError::create(
-                    build_context.template.clone(),
-                    build_context.offset,
-                    String::from("Cannot recognize a node")));
-            }
+            Some(n) => Ok(n),
+            None => Err(TemplateError::create(
+                build_context.template.clone(),
+                build_context.offset,
+                String::from("Cannot recognize a node"))),
+        }?;
+        let data = parsed_node.build(&build_context)?;
+        let node = if data.is_nesting_started {
+            nodes_stack.push(parent_node);
+            build_context.apply_offset(data.end_offset);
+            parsed_node
+        } else {
+            parent_node.add_child(parsed_node);
+            build_context.apply_offset(data.end_offset);
+            parent_node
         };
-        match parsed_node.build(&build_context) {
-            NodeBuildResult::EndOfNode(offset) => {
-                parent_node.add_child(parsed_node);
-                build_context.apply_offset(offset);
-                Ok(parent_node)
-            },
-            NodeBuildResult::Error(err) => {
-                Err(err)
-            },
-            NodeBuildResult::NestedNode(offset) => {
-                nodes_stack.push(parent_node);
-                build_context.apply_offset(offset);
-                Ok(parsed_node)
-            }
-        }
+        Ok((node, data.is_nolinebreak_next_node))
     }
 
     fn build(&self, template: &String) -> Result<Box<dyn Node>, TemplateError> {
         let mut nodes_stack: Vec<Box<dyn Node>> = Vec::new();
         let mut parent_node:Box<dyn Node> = Box::from(ContainerNode::create());
         let mut build_context = BuildContext::new();
+        let mut is_nolinebreak_next_node = false;
         build_context.template = template.clone();
         build_context.template_remain = template.clone();
         let mut prev_template_remain_len = build_context.template_remain.len()+1;
@@ -112,18 +117,20 @@ impl Engine {
             }
             prev_template_remain_len = build_context.template_remain.len();
 
-            parent_node = if parent_node.is_continuation(&build_context) {
+            let build_result = if parent_node.is_continuation(&build_context) {
                 self.build_continuation(&mut build_context, &mut nodes_stack, parent_node)?
             } else {
                 self.build_new_block(&mut build_context, &mut nodes_stack, parent_node)?
             };
+
+            parent_node = build_result.0; // TODO: replcae tuple with just data struct
             build_context.offset += 1;
         }
         parent_node.update_end_offset();
         Ok(parent_node)
     } 
 
-    // TODO: replace string template with borrowed string
+    // TODO: should template be replaced with borrowed string?
     pub fn render(&self, template: String, parameters: VariableStore) -> RenderResult {
         let parent_node = self.build(&template)?;
         let mut render_context = RenderContext::new();
@@ -133,7 +140,7 @@ impl Engine {
         parent_node.render(&render_context)
     }
 
-    // TODO: replace string template with borrowed string
+    // TODO: should template be replaced with borrowed string?
     pub fn debug_print_structure(&self, template: String) -> RenderResult {
         let parent_node = self.build(&template)?;
         RenderResult::Ok(parent_node.debug_print_structure(0))
