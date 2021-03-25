@@ -64,7 +64,12 @@ impl Node for ExpressionNode {
             )),
         }?;
         self.expression_node = expr_node;
-        Ok(NodeBuildData::new(end_pos_with_tag, false, self.base_node.has_nolinebreak_end))
+        Ok(NodeBuildData{
+            end_offset: end_pos_with_tag,
+            is_nesting_started: false,
+            is_nolinebreak_prev_node: context.template_remain[2..3].to_string() == "-",
+            is_nolinebreak_next_node: context.template_remain[end_pos-1..end_pos].to_string() == "-",
+        })
     }
 
     fn is_continuation(&self, _context: &BuildContext) -> bool {

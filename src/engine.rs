@@ -1,8 +1,9 @@
-use crate::error::template_error::TemplateError;
+use std::collections::LinkedList;
 
 use crate::common::variable::VariableStore;
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
+use crate::error::template_error::TemplateError;
 use crate::nodes::Node;
 use crate::nodes::NodeCreator;
 use crate::nodes::container::ContainerNode;
@@ -25,18 +26,17 @@ pub struct NodeBuildData {
     // does NOT consider the current offset from context
     pub end_offset: usize,
     pub is_nesting_started: bool,
-    // if true, the next node will have a no linebreak in beginning
+    
+    /// if true, the next node will have a no linebreak in beginning
     pub is_nolinebreak_next_node: bool,
+    /// if true, the previous node will have a no linebreak in beginning
+    pub is_nolinebreak_prev_node: bool,
 }
 
-impl NodeBuildData {
-    pub fn new(end_offset: usize, is_nesting_started: bool, is_nolinebreak_next_node: bool) -> NodeBuildData {
-        NodeBuildData {
-            end_offset: end_offset,
-            is_nesting_started: is_nesting_started,
-            is_nolinebreak_next_node: is_nolinebreak_next_node,
-        }
-    }
+struct TemplateStructure {
+    root_node: Box<dyn Node>,
+    no_linebreaks_beginning: LinkedList<usize>,
+    no_linebreaks_end: LinkedList<usize>,
 }
 
 pub type NodeBuildResult = Result<NodeBuildData, TemplateError>;
@@ -91,6 +91,7 @@ impl Engine {
                 String::from("Cannot recognize a node"))),
         }?;
         let data = parsed_node.build(&build_context)?;
+        let old_offset = build_context.offset;
         let node = if data.is_nesting_started {
             nodes_stack.push(parent_node);
             build_context.apply_offset(data.end_offset);
@@ -100,10 +101,18 @@ impl Engine {
             build_context.apply_offset(data.end_offset);
             parent_node
         };
+
+        if data.is_nolinebreak_prev_node {
+            build_context.no_linebreaks_beginning.push_back(old_offset);
+        }
+        if data.is_nolinebreak_next_node {
+            build_context.no_linebreaks_end.push_back(build_context.offset);
+        }
+
         Ok((node, data.is_nolinebreak_next_node))
     }
 
-    fn build(&self, template: &String) -> Result<Box<dyn Node>, TemplateError> {
+    fn build(&self, template: &String) -> Result<TemplateStructure, TemplateError> {
         let mut nodes_stack: Vec<Box<dyn Node>> = Vec::new();
         let mut parent_node:Box<dyn Node> = Box::from(ContainerNode::create());
         let mut build_context = BuildContext::new();
@@ -127,23 +136,29 @@ impl Engine {
             build_context.offset += 1;
         }
         parent_node.update_end_offset();
-        Ok(parent_node)
+        Ok(TemplateStructure{
+            root_node: parent_node,
+            no_linebreaks_beginning: build_context.no_linebreaks_beginning,
+            no_linebreaks_end: build_context.no_linebreaks_end})
     } 
 
     // TODO: should template be replaced with borrowed string?
     pub fn render(&self, template: String, parameters: VariableStore) -> RenderResult {
-        let parent_node = self.build(&template)?;
+        let template_structure = self.build(&template)?;
+        let parent_node = template_structure.root_node;
         let mut render_context = RenderContext::new();
         render_context.filename = String::from("(root)");
         render_context.template = template;
         render_context.parameters = parameters;
+        render_context.no_linebreaks_beginning = template_structure.no_linebreaks_beginning;
+        render_context.no_linebreaks_end = template_structure.no_linebreaks_end;
         parent_node.render(&render_context)
     }
 
     // TODO: should template be replaced with borrowed string?
     pub fn debug_print_structure(&self, template: String) -> RenderResult {
         let parent_node = self.build(&template)?;
-        RenderResult::Ok(parent_node.debug_print_structure(0))
+        RenderResult::Ok(parent_node.root_node.debug_print_structure(0))
     }
 }
 

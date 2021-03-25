@@ -49,7 +49,12 @@ impl Node for StaticNode {
         self.base_node.start_offset = context.offset;
         self.base_node.end_offset = context.offset + end_pos;
         self.content = context.template_remain[0..end_pos+1].to_string();
-        Ok(NodeBuildData::new(end_pos, false, false))
+        Ok(NodeBuildData{
+            end_offset: end_pos,
+            is_nesting_started: false,
+            is_nolinebreak_prev_node: false,
+            is_nolinebreak_next_node: false,
+        })
     }
 
     fn is_continuation(&self, _context: &BuildContext) -> bool {

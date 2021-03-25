@@ -25,7 +25,12 @@ impl Node for ContainerNode {
     }
 
     fn build(&mut self, _context: &BuildContext) -> NodeBuildResult {
-        Ok(NodeBuildData::new(0, false, false))
+        Ok(NodeBuildData{
+            end_offset: 0,
+            is_nesting_started: false,
+            is_nolinebreak_prev_node: false,
+            is_nolinebreak_next_node: false,
+        })
     }
 
     fn is_continuation(&self, _context: &BuildContext) -> bool {

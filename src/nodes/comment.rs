@@ -33,7 +33,6 @@ impl Node for CommentNode {
     }
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
-        self.base_node.has_nolinebreak_beginning = context.template_remain[2..3].to_string() == "-";
         let end_pos = context.template_remain.find(COMMENT_END);
         match end_pos {
             None => Err(TemplateError::create(
@@ -45,7 +44,12 @@ impl Node for CommentNode {
                 self.base_node.end_offset = context.offset + end_pos_with_tag;
                 self.base_node.has_nolinebreak_end = context.template_remain[end_pos-1..end_pos].to_string() == "-";
                 self.base_node.start_offset = context.offset;
-                Ok(NodeBuildData::new(end_pos_with_tag, false, self.base_node.has_nolinebreak_end))
+                Ok(NodeBuildData{
+                    end_offset: end_pos_with_tag,
+                    is_nesting_started: false,
+                    is_nolinebreak_prev_node: context.template_remain[2..3].to_string() == "-",
+                    is_nolinebreak_next_node: context.template_remain[end_pos-1..end_pos].to_string() == "-",
+                })
             }
         }
     }

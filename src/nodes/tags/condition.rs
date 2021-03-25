@@ -93,7 +93,12 @@ impl ConditionNode {
                 container_base_node.start_offset = context.offset + tag_end_pos_abs + 1;
                 container_base_node.end_offset = container_base_node.start_offset;
                 self.base_node.children.push(Box::from(container));
-                Ok(NodeBuildData::new(tag_end_pos_abs, true, has_nolinebreak_end))
+                Ok(NodeBuildData{
+                    end_offset: tag_end_pos_abs,
+                    is_nesting_started: true,
+                    is_nolinebreak_prev_node: has_nolinebreak_beginning,
+                    is_nolinebreak_next_node: has_nolinebreak_end,
+                })
             },
             Err(err) => Err(TemplateError::create(
                 context.template.clone(),
@@ -134,15 +139,24 @@ impl ConditionNode {
         container_base_node.has_nolinebreak_beginning = has_nolinebreak_beginning;
         container_base_node.has_nolinebreak_end = has_nolinebreak_end;
         self.base_node.children.push(Box::from(container));
-        Ok(NodeBuildData::new(tag_end_pos_abs, true, has_nolinebreak_end))
+        Ok(NodeBuildData{
+            end_offset: tag_end_pos_abs,
+            is_nesting_started: true,
+            is_nolinebreak_prev_node: has_nolinebreak_beginning,
+            is_nolinebreak_next_node: has_nolinebreak_end,
+        })
     }
 
     fn build_block_end(&mut self, context: &BuildContext, has_nolinebreak_beginning: bool) -> NodeBuildResult {
         match expressions::get_end_offset(&context.template_remain, TAG_END) {
             Some(end_pos) => {
-                let has_nolinebreak_end = context.template_remain[..end_pos-TAG_END.len()+1].ends_with('-');
                 self.base_node.end_offset = context.offset + end_pos;
-                Ok(NodeBuildData::new(end_pos, false, has_nolinebreak_end))
+                Ok(NodeBuildData{
+                    end_offset: end_pos,
+                    is_nesting_started: false,
+                    is_nolinebreak_prev_node: has_nolinebreak_beginning,
+                    is_nolinebreak_next_node: context.template_remain[..end_pos-TAG_END.len()+1].ends_with('-'),
+                })
             },
             None => Err(TemplateError::create(
                 context.template.clone(),
