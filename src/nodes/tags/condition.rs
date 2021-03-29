@@ -176,17 +176,6 @@ impl ConditionNode {
                 ));
             }
         };
-        context.previous_has_nolinebreak_end = match self.base_node.children.get(0) {
-            Some(child) => child.get_base_node().has_nolinebreak_beginning,
-            None => false,
-        };
-        {
-            let (is_last_static, next_has_nolinebreak_beginning) = match self.base_node.children.last() {
-                Some(child) => (child.is_static(), child.get_base_node().has_nolinebreak_end),
-                None => (false, false),
-            };
-            context.next_has_nolinebreak_beginning = next_has_nolinebreak_beginning;
-        }
 
         match child.render(context) {
             Ok(rendered_string) => RenderResult::Ok(rendered_string),

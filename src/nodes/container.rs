@@ -40,7 +40,7 @@ impl Node for ContainerNode {
         let mut result = String::new();
         let mut previous_no_linebreak_end = self.base_node.has_nolinebreak_beginning;
         for child in &self.base_node.children {
-            if context.previous_was_static && child.has_nolinebreak_beginning() {
+            if child.has_nolinebreak_beginning() {
                 result = match result.strip_suffix("\n") {
                     Some(r) => String::from(r),
                     None => result
@@ -63,11 +63,6 @@ impl Node for ContainerNode {
 
             result += child_render_result.as_str();
             previous_no_linebreak_end = child.has_nolinebreak_end();
-
-            // TODO: remove these vars from context entirely?
-            context.next_has_nolinebreak_beginning = false;
-            context.previous_has_nolinebreak_end = child.has_nolinebreak_end();
-            context.previous_was_static = child.is_static();
         }
 
         RenderResult::Ok(result)
