@@ -107,7 +107,6 @@ impl Engine {
         let mut nodes_stack: Vec<Box<dyn Node>> = Vec::new();
         let mut parent_node:Box<dyn Node> = Box::from(ContainerNode::create());
         let mut build_context = BuildContext::new();
-        let mut is_nolinebreak_next_node = false;
         build_context.template = template.clone();
         build_context.template_remain = template.clone();
         let mut prev_template_remain_len = build_context.template_remain.len()+1;
@@ -132,7 +131,7 @@ impl Engine {
 
     // TODO: should template be replaced with borrowed string?
     pub fn render(&self, template: String, parameters: VariableStore) -> RenderResult {
-        let mut parent_node = self.build(&template)?;
+        let parent_node = self.build(&template)?;
         let mut render_context = RenderContext::new();
         render_context.filename = String::from("(root)");
         render_context.template = template;

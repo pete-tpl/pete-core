@@ -48,37 +48,27 @@ impl Node for ContainerNode {
             }
 
             let mut child_render_result = child.render(context)?;
-            if child.is_static() && context.next_has_nolinebreak_beginning {
+            if child.get_base_node().has_nolinebreak_end {
                 child_render_result = match child_render_result.strip_suffix("\n") {
                     Some(r) => String::from(r),
                     None => child_render_result
                 };
             }
-            // Remove a linebreak from beginning of current node if the previous node has a nolinebreak at the end
-            // if previous_no_linebreak_end {
-            //     child_render_result = match child_render_result.strip_prefix("\n") {
-            //         Some(r) => String::from(r),
-            //         None => child_render_result
-            //     };
-            // }
-            // Remove a linebreak from end of currently rendered result if current node has nolinebreak at the beginning
+            if previous_no_linebreak_end {
+                child_render_result = match child_render_result.strip_prefix("\n") {
+                    Some(r) => String::from(r),
+                    None => child_render_result
+                };
+            }
 
             result += child_render_result.as_str();
             previous_no_linebreak_end = child.has_nolinebreak_end();
 
+            // TODO: remove these vars from context entirely?
             context.next_has_nolinebreak_beginning = false;
-            // if !child.is_control_node() {
-            
-                context.previous_has_nolinebreak_end = child.has_nolinebreak_end();
-            // }
+            context.previous_has_nolinebreak_end = child.has_nolinebreak_end();
             context.previous_was_static = child.is_static();
         }
-        // if self.base_node.has_nolinebreak_end { // TODO: probably double assertion here and in loop
-        //     result = match result.strip_suffix("\n") {
-        //         Some(r) => String::from(r),
-        //         None => result
-        //     }; 
-        // }
 
         RenderResult::Ok(result)
     }

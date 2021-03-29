@@ -64,19 +64,8 @@ impl Node for StaticNode {
         return false;
     }
 
-    fn render(&self, context: &mut RenderContext) -> RenderResult {
-        let striped_content = match context.previous_has_nolinebreak_end {
-            true => match self.content.strip_prefix("\n") {
-                Some(s) => Some(s.to_string()),
-                None => None,
-            },
-            false => None
-        };
-        let content = match striped_content {
-            Some(s) => s,
-            None => self.content.clone(),
-        };
-        Ok(content)
+    fn render(&self, _context: &mut RenderContext) -> RenderResult {
+        Ok(self.content.clone())
     }
 
     fn get_name(&self) -> &str {

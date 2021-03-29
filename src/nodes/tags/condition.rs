@@ -176,10 +176,6 @@ impl ConditionNode {
                 ));
             }
         };
-        // context.next_has_nolinebreak_beginning = match self.base_node.children.get(index+1) {
-        //     Some(child) => child.get_base_node().has_nolinebreak_beginning,
-        //     None => false,
-        // };
         context.previous_has_nolinebreak_end = match self.base_node.children.get(0) {
             Some(child) => child.get_base_node().has_nolinebreak_beginning,
             None => false,
