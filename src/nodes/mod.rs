@@ -20,7 +20,7 @@ pub trait Node: HasBaseNodeTrait {
     fn add_child(&mut self, child: Box<dyn Node>);
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult;
     fn is_continuation(&self, context: &BuildContext) -> bool;
-    fn render(&self, context: &RenderContext) -> RenderResult;
+    fn render(&self, context: &mut RenderContext) -> RenderResult;
 
     fn has_nolinebreak_end(&self) -> bool {
         self.get_base_node().has_nolinebreak_end
@@ -30,10 +30,19 @@ pub trait Node: HasBaseNodeTrait {
         self.get_base_node().has_nolinebreak_beginning
     }
 
-    fn debug_name(&self) -> &str;
+    fn is_static(&self) -> bool {
+        false
+    }
+
+    fn is_control_node(&self) -> bool {
+        return true;
+    }
+
+    fn get_name(&self) -> &str;
+
     fn debug_print(&self) -> String {
         return format!("[{} - {}] {} <{}/{}>", self.get_base_node().start_offset, self.get_base_node().end_offset , 
-        self.debug_name(), self.has_nolinebreak_beginning(), self.has_nolinebreak_end())
+        self.get_name(), self.has_nolinebreak_beginning(), self.has_nolinebreak_end())
     }
     
     fn debug_print_structure(&self, nesting_level: usize) -> String {
@@ -57,6 +66,9 @@ pub trait Node: HasBaseNodeTrait {
 pub trait HasBaseNodeTrait {
     fn get_base_node(&self) -> &BaseNode;
     fn get_base_node_mut(&mut self) -> &mut BaseNode;
+    fn get_children_mut(&mut self) -> &mut Vec<Box<dyn Node>> {
+        self.get_base_node_mut().get_children_mut()
+    }
 }
 
 pub struct BaseNode {
@@ -80,6 +92,10 @@ impl BaseNode {
 
     fn get_children(&self) -> &Vec<Box<dyn Node>> {
         &self.children
+    }
+
+    fn get_children_mut(&mut self) -> &mut Vec<Box<dyn Node>> {
+        &mut self.children
     }
 
     fn set_end_offset(&mut self, offset: usize) {

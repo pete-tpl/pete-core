@@ -104,6 +104,12 @@ impl ConditionNode {
     }
 
     fn build_if_block_else(&mut self, context: &BuildContext, string: &String, has_nolinebreak_beginning: bool) -> NodeBuildResult {
+        match self.get_children_mut().last_mut() { // TODO: check if is duplicate
+            Some(child) => {
+                child.get_base_node_mut().has_nolinebreak_end = has_nolinebreak_beginning;
+            },
+            None => {},
+        };
         let (expr_string, tag_end_pos_abs, has_nolinebreak_end) = match parse_expression(&context.template_remain, string) {
             Ok(s) => s,
             Err(s) => return Err(TemplateError::create(
@@ -138,10 +144,17 @@ impl ConditionNode {
     }
 
     fn build_block_end(&mut self, context: &BuildContext, has_nolinebreak_beginning: bool) -> NodeBuildResult {
+        match self.get_children_mut().last_mut() { // TODO: check if is duplicate
+            Some(child) => {
+                child.get_base_node_mut().has_nolinebreak_end = has_nolinebreak_beginning;
+            },
+            None => {},
+        };
         match expressions::get_end_offset(&context.template_remain, TAG_END) {
             Some(end_pos) => {
                 let has_nolinebreak_end = context.template_remain[..end_pos-TAG_END.len()+1].ends_with('-');
                 self.base_node.end_offset = context.offset + end_pos;
+                self.base_node.has_nolinebreak_end = has_nolinebreak_end;
                 Ok(NodeBuildData::new(end_pos, false, has_nolinebreak_end))
             },
             None => Err(TemplateError::create(
@@ -152,7 +165,7 @@ impl ConditionNode {
     }
 
     // Renders a condition with index "index"
-    fn render_conditional_block(&self, index: usize, context: &RenderContext) -> RenderResult {
+    fn render_conditional_block(&self, index: usize, context: &mut RenderContext) -> RenderResult {
         let child = match self.base_node.children.get(index) {
             Some(child) => child,
             None => {
@@ -163,6 +176,22 @@ impl ConditionNode {
                 ));
             }
         };
+        // context.next_has_nolinebreak_beginning = match self.base_node.children.get(index+1) {
+        //     Some(child) => child.get_base_node().has_nolinebreak_beginning,
+        //     None => false,
+        // };
+        context.previous_has_nolinebreak_end = match self.base_node.children.get(0) {
+            Some(child) => child.get_base_node().has_nolinebreak_beginning,
+            None => false,
+        };
+        {
+            let (is_last_static, next_has_nolinebreak_beginning) = match self.base_node.children.last() {
+                Some(child) => (child.is_static(), child.get_base_node().has_nolinebreak_end),
+                None => (false, false),
+            };
+            context.next_has_nolinebreak_beginning = next_has_nolinebreak_beginning;
+        }
+
         match child.render(context) {
             Ok(rendered_string) => RenderResult::Ok(rendered_string),
             Err(err) => RenderResult::Err(TemplateError::create(
@@ -231,7 +260,7 @@ impl Node for ConditionNode {
         ELSEIF_KEYWORD == keyword || ELSE_KEYWORD == keyword || ENDIF_KEYWORD == keyword
     }
 
-    fn render(&self, context: &RenderContext) -> RenderResult {
+    fn render(&self, context: &mut RenderContext) -> RenderResult {
         for (i, expression) in self.expressions.iter().enumerate() {
             let result = match expression.evaluate(context) {
                 Ok(variable) => {
@@ -255,7 +284,7 @@ impl Node for ConditionNode {
         RenderResult::Ok(String::new())
     }
 
-    fn debug_name(&self) -> &str {
+    fn get_name(&self) -> &str {
         return "condition";
     }
 }
@@ -310,8 +339,8 @@ mod tests {
         }
 
 
-        let context = RenderContext::new();
-        match node.render(&context) {
+        let mut context = RenderContext::new();
+        match node.render(&mut context) {
             Ok(string) => {
                 assert_eq!(String::new(), string);
             },

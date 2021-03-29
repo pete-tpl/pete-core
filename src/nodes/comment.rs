@@ -54,11 +54,15 @@ impl Node for CommentNode {
         return false;
     }
 
-    fn render(&self, _context: &RenderContext) -> RenderResult {
+    fn is_control_node(&self) -> bool {
+        return false;
+    }
+
+    fn render(&self, _context: &mut RenderContext) -> RenderResult {
         RenderResult::Ok(String::new())
     }
 
-    fn debug_name(&self) -> &str {
+    fn get_name(&self) -> &str {
         return "comment";
     }
 }
@@ -93,8 +97,8 @@ mod tests {
             },
             _ => panic!("Failed to build a node")
         }
-        let context = RenderContext::new();
-        match node.render(&context) {
+        let mut context = RenderContext::new();
+        match node.render(&mut context) {
             Ok(string) => {
                 assert_eq!(String::new(), string);
             },

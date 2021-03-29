@@ -52,15 +52,34 @@ impl Node for StaticNode {
         Ok(NodeBuildData::new(end_pos, false, false))
     }
 
+    fn is_static(&self) -> bool {
+        true
+    }
+
     fn is_continuation(&self, _context: &BuildContext) -> bool {
         return false;
     }
 
-    fn render(&self, _context: &RenderContext) -> RenderResult {
-        Result::Ok(self.content.clone())
+    fn is_control_node(&self) -> bool {
+        return false;
     }
 
-    fn debug_name(&self) -> &str {
+    fn render(&self, context: &mut RenderContext) -> RenderResult {
+        let striped_content = match context.previous_has_nolinebreak_end {
+            true => match self.content.strip_prefix("\n") {
+                Some(s) => Some(s.to_string()),
+                None => None,
+            },
+            false => None
+        };
+        let content = match striped_content {
+            Some(s) => s,
+            None => self.content.clone(),
+        };
+        Ok(content)
+    }
+
+    fn get_name(&self) -> &str {
         return "static";
     }
 }
@@ -95,7 +114,7 @@ mod tests {
             },
             _ => panic!("Failed to build a node")
         }
-        match node.render(&RenderContext::new()) {
+        match node.render(&mut RenderContext::new()) {
             Ok(string) => {
                 assert_eq!(String::from("Hello, World!"), string);
             },

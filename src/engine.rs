@@ -132,12 +132,12 @@ impl Engine {
 
     // TODO: should template be replaced with borrowed string?
     pub fn render(&self, template: String, parameters: VariableStore) -> RenderResult {
-        let parent_node = self.build(&template)?;
+        let mut parent_node = self.build(&template)?;
         let mut render_context = RenderContext::new();
         render_context.filename = String::from("(root)");
         render_context.template = template;
         render_context.parameters = parameters;
-        parent_node.render(&render_context)
+        parent_node.render(&mut render_context)
     }
 
     // TODO: should template be replaced with borrowed string?

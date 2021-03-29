@@ -33,6 +33,12 @@ fn test_conditions_nolinebreak() {
     let mut variables = VariableStore::new();
     variables.insert(String::from("myvar"), Variable::new_from_int(2));
     let (input, output) = read_test_files("tests/templates/conditions/nolinebreak.input.twig", "tests/templates/conditions/nolinebreak.output.txt");
+
+    match engine.debug_print_structure(input.clone()) {
+        Ok(s) => println!("{}", s),
+        Err(_) => panic!("Error"),
+
+    };
     match engine.render(input, variables) {
         Ok(string) => assert_eq!(string, output),
         Err(e) => panic!("Error: {}", &e.message)
