@@ -5,8 +5,9 @@ use crate::expressions;
 use crate::expressions::nodes::{Node as ExpressionNode};
 use crate::expressions::nodes::general::literal::Literal;
 use crate::error::template_error::TemplateError;
-use crate::nodes::{BaseNode, Node, TAG_START, TAG_END};
+use crate::nodes::{BaseNode, Node};
 use crate::nodes::container::ContainerNode;
+use crate::parsers::tag_parser::{get_keyword, TAG_END};
 
 use derive_macro::HasBaseNode;
 
@@ -73,7 +74,6 @@ impl ConditionNode {
     }
 
     fn build_block_if(&mut self, context: &BuildContext, string: &String, has_nolinebreak_beginning: bool) -> NodeBuildResult {
-        self.base_node.has_nolinebreak_beginning = has_nolinebreak_beginning;
         self.base_node.start_offset = context.offset;
         let (expr_string, tag_end_pos_abs, has_nolinebreak_end) = match parse_expression(&context.template_remain, string) {
             Ok(s) => s,
@@ -104,12 +104,6 @@ impl ConditionNode {
     }
 
     fn build_if_block_else(&mut self, context: &BuildContext, string: &String, has_nolinebreak_beginning: bool) -> NodeBuildResult {
-        match self.get_children_mut().last_mut() { // TODO: check if is duplicate
-            Some(child) => {
-                child.get_base_node_mut().has_nolinebreak_end = has_nolinebreak_beginning;
-            },
-            None => {},
-        };
         let (expr_string, tag_end_pos_abs, has_nolinebreak_end) = match parse_expression(&context.template_remain, string) {
             Ok(s) => s,
             Err(s) => return Err(TemplateError::create(
@@ -143,13 +137,7 @@ impl ConditionNode {
         Ok(NodeBuildData::new(tag_end_pos_abs, true, has_nolinebreak_end))
     }
 
-    fn build_block_end(&mut self, context: &BuildContext, has_nolinebreak_beginning: bool) -> NodeBuildResult {
-        match self.get_children_mut().last_mut() { // TODO: check if is duplicate
-            Some(child) => {
-                child.get_base_node_mut().has_nolinebreak_end = has_nolinebreak_beginning;
-            },
-            None => {},
-        };
+    fn build_block_end(&mut self, context: &BuildContext) -> NodeBuildResult {
         match expressions::get_end_offset(&context.template_remain, TAG_END) {
             Some(end_pos) => {
                 let has_nolinebreak_end = context.template_remain[..end_pos-TAG_END.len()+1].ends_with('-');
@@ -188,34 +176,6 @@ impl ConditionNode {
     }
 }
 
-/// Returns:
-/// - a keyword (if, elseif, etc)
-/// - a remain AFTER keyword
-/// - if the parsed tag has nolinebreak char
-/// 
-/// # Examples
-/// 
-/// ```ignore
-/// assert_eq!(get_keyword("{% if 1 + 1 %}"), ("if", " 1 + 1 %}", false));
-/// assert_eq!(get_keyword("{%- if 1 + 1 %}"), ("if", " 1 + 1 %}", true));
-/// ```
-fn get_keyword(string: &String) -> (&str, String, bool) {
-    let s = match string.strip_prefix(TAG_START) {
-        Some(m) => m,
-        None => return ("", string.clone(), false),
-    };
-    let (s, has_nolinebreak_beginning) = match s.strip_prefix('-') {
-        Some(m) => (m, true),
-        None => (s, false),
-    };
-    let s =  s.trim_start_matches(' ');
-    let endpos = match s.find(|c| !char::is_alphabetic(c)) {
-        Some(p) => p,
-        None => s.len() - 1,
-    };
-    (&s[..endpos], String::from(&s[endpos..]), has_nolinebreak_beginning)
-}
-
 impl Node for ConditionNode {
     fn add_child(&mut self, child: Box<dyn Node>) {
         match self.base_node.children.last_mut() {
@@ -229,10 +189,15 @@ impl Node for ConditionNode {
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
         let (keyword, remain, has_nolinebreak_beginning) = get_keyword(&context.template_remain);
+
+        match self.get_children_mut().last_mut() { // TODO: check if is duplicate
+            Some(child) => child.get_base_node_mut().has_nolinebreak_end = has_nolinebreak_beginning,
+            None => self.get_base_node_mut().has_nolinebreak_beginning = has_nolinebreak_beginning,
+        };
         match keyword {
             IF_KEYWORD|ELSEIF_KEYWORD => self.build_block_if(context, &remain, has_nolinebreak_beginning),
             ELSE_KEYWORD => self.build_if_block_else(context, &remain, has_nolinebreak_beginning),
-            ENDIF_KEYWORD => self.build_block_end(context, has_nolinebreak_beginning),
+            ENDIF_KEYWORD => self.build_block_end(context),
             _ => Err(TemplateError::create(
                 context.template.clone(),
                 context.offset,

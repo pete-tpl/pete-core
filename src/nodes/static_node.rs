@@ -1,7 +1,8 @@
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildData, NodeBuildResult, RenderResult};
-use crate::nodes::{BaseNode, Node, COMMENT_START, DYNAMIC_BLOCK_STARTS, EXPRESSION_START, TAG_START};
+use crate::nodes::{BaseNode, Node, COMMENT_START, DYNAMIC_BLOCK_STARTS, EXPRESSION_START};
+use crate::parsers::tag_parser::TAG_START;
 
 use derive_macro::HasBaseNode;
 

@@ -7,13 +7,12 @@ pub mod static_node;
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
+use crate::parsers::tag_parser::TAG_START;
 
 const EXPRESSION_START: &str = "{{";
 const EXPRESSION_END: &str = "}}";
 const COMMENT_START: &str = "{#";
 const COMMENT_END: &str = "#}";
-const TAG_START: &str = "{%";
-const TAG_END: &str = "%}";
 const DYNAMIC_BLOCK_STARTS: [&str; 3] = [EXPRESSION_START, TAG_START, COMMENT_START];
 
 pub trait Node: HasBaseNodeTrait {
