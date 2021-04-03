@@ -67,7 +67,11 @@ impl ConditionNode {
     }
 
     pub fn try_create_from_template(template: &String) -> Option<Box<dyn Node>> {
-        match get_keyword(template).0 {
+        let keyword = match get_keyword(template) {
+            Some(r) => r.keyword,
+            None => return None,
+        };
+        match keyword {
             IF_KEYWORD => Some(Box::from(ConditionNode::create())),
             _ => None
         }
@@ -188,15 +192,22 @@ impl Node for ConditionNode {
     }
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
-        let (keyword, remain, has_nolinebreak_beginning) = get_keyword(&context.template_remain);
+        //let (keyword, remain, has_nolinebreak_beginning) = 
+        let result = match get_keyword(&context.template_remain) {
+            Some(r) => Ok(r),
+            None => Err(TemplateError::create(
+                context.template.clone(),
+                context.offset,
+                String::from("Unknown keyword. Expected: (if|else|elseif|endif)"))),
+        }?;
 
         match self.get_children_mut().last_mut() { // TODO: check if is duplicate
-            Some(child) => child.get_base_node_mut().has_nolinebreak_end = has_nolinebreak_beginning,
-            None => self.get_base_node_mut().has_nolinebreak_beginning = has_nolinebreak_beginning,
+            Some(child) => child.get_base_node_mut().has_nolinebreak_end = result.has_nolinebreak_beginning,
+            None => self.get_base_node_mut().has_nolinebreak_beginning = result.has_nolinebreak_beginning,
         };
-        match keyword {
-            IF_KEYWORD|ELSEIF_KEYWORD => self.build_block_if(context, &remain, has_nolinebreak_beginning),
-            ELSE_KEYWORD => self.build_if_block_else(context, &remain, has_nolinebreak_beginning),
+        match result.keyword {
+            IF_KEYWORD|ELSEIF_KEYWORD => self.build_block_if(context, &result.remain, result.has_nolinebreak_beginning),
+            ELSE_KEYWORD => self.build_if_block_else(context, &result.remain, result.has_nolinebreak_beginning),
             ENDIF_KEYWORD => self.build_block_end(context),
             _ => Err(TemplateError::create(
                 context.template.clone(),
@@ -206,7 +217,10 @@ impl Node for ConditionNode {
     }
 
     fn is_continuation(&self, context: &BuildContext) -> bool {
-        let keyword = get_keyword(&context.template_remain).0;
+        let keyword = match get_keyword(&context.template_remain) {
+            Some(r) => r.keyword,
+            None => "",
+        };
         ELSEIF_KEYWORD == keyword || ELSE_KEYWORD == keyword || ENDIF_KEYWORD == keyword
     }
 
