@@ -160,7 +160,6 @@ impl Node for ConditionNode {
     }
 
     fn build(&mut self, context: &BuildContext) -> NodeBuildResult {
-        //let (keyword, remain, has_nolinebreak_beginning) = 
         let result = match get_keyword(&context.template_remain) {
             Some(r) => Ok(r),
             None => Err(TemplateError::create(
@@ -169,7 +168,7 @@ impl Node for ConditionNode {
                 String::from("Unknown keyword. Expected: (if|else|elseif|endif)"))),
         }?;
 
-        match self.get_children_mut().last_mut() { // TODO: check if is duplicate
+        match self.get_children_mut().last_mut() {
             Some(child) => child.get_base_node_mut().has_nolinebreak_end = result.has_nolinebreak_beginning,
             None => self.get_base_node_mut().has_nolinebreak_beginning = result.has_nolinebreak_beginning,
         };

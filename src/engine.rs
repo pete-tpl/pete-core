@@ -59,16 +59,15 @@ impl Engine {
 
     fn build_continuation(&self, build_context: &mut BuildContext,
                           nodes_stack: &mut Vec<Box<dyn Node>>, mut parent_node: Box<dyn Node>)
-                          -> Result<(Box<dyn Node>, bool), TemplateError> {
+                          -> Result<Box<dyn Node>, TemplateError> {
         let data = parent_node.build(&build_context)?;
         let node = if data.is_nesting_started {
-            build_context.apply_offset(data.end_offset); // TODO: duplicate? See below
             parent_node
         } else {
             match nodes_stack.pop() {
                 Some(mut upper_parent_node) => {
                     upper_parent_node.add_child(parent_node);
-                    build_context.apply_offset(data.end_offset);  // TODO: duplicate? See above
+                    
                     Ok(upper_parent_node)
                 },
                 None => Err(TemplateError::create(
@@ -77,12 +76,13 @@ impl Engine {
                         String::from("Unexpected end of node stack.")))
             }?
         };
-        Ok((node, data.is_nolinebreak_next_node))
+        build_context.apply_offset(data.end_offset);
+        Ok(node)
     }
 
     fn build_new_block(&self, build_context: &mut BuildContext,
                        nodes_stack: &mut Vec<Box<dyn Node>>, mut parent_node: Box<dyn Node>)
-                       -> Result<(Box<dyn Node>, bool), TemplateError> {
+                       -> Result<Box<dyn Node>, TemplateError> {
         let mut parsed_node = match self.parse_node(&build_context) {
             Some(n) => Ok(n),
             None => Err(TemplateError::create(
@@ -100,7 +100,7 @@ impl Engine {
             build_context.apply_offset(data.end_offset);
             parent_node
         };
-        Ok((node, data.is_nolinebreak_next_node))
+        Ok(node)
     }
 
     fn build(&self, template: &String) -> Result<Box<dyn Node>, TemplateError> {
@@ -122,14 +122,13 @@ impl Engine {
                 self.build_new_block(&mut build_context, &mut nodes_stack, parent_node)?
             };
 
-            parent_node = build_result.0; // TODO: replcae tuple with just data struct
+            parent_node = build_result;
             build_context.offset += 1;
         }
         parent_node.update_end_offset();
         Ok(parent_node)
     } 
 
-    // TODO: should template be replaced with borrowed string?
     pub fn render(&self, template: String, parameters: VariableStore) -> RenderResult {
         let parent_node = self.build(&template)?;
         let mut render_context = RenderContext::new();
@@ -139,7 +138,6 @@ impl Engine {
         parent_node.render(&mut render_context)
     }
 
-    // TODO: should template be replaced with borrowed string?
     pub fn debug_print_structure(&self, template: String) -> RenderResult {
         let parent_node = self.build(&template)?;
         RenderResult::Ok(parent_node.debug_print_structure(0))
