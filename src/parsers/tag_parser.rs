@@ -1,5 +1,4 @@
-pub const TAG_START: &str = "{%";
-pub const TAG_END: &str = "%}";
+use crate::nodes::tags::TAG_START;
 
 /// Result of get_keyword function invocation
 pub struct GetKeywordResult<'a> {

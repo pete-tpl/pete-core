@@ -6,9 +6,10 @@ use crate::expressions::nodes::{Node as ExpressionNode};
 use crate::expressions::nodes::general::literal::Literal;
 use crate::error::template_error::TemplateError;
 use crate::nodes::{BaseNode, Node};
+use crate::nodes::tags::TAG_END;
 use crate::nodes::container::ContainerNode;
 use crate::parsers::expression_parser::{ parse_expression_string, ParseExpressionStringResult };
-use crate::parsers::tag_parser::{get_keyword, GetKeywordResult ,TAG_END};
+use crate::parsers::tag_parser::{get_keyword, GetKeywordResult};
 
 use derive_macro::HasBaseNode;
 

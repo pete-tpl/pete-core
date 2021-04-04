@@ -2,7 +2,9 @@ pub mod condition;
 
 use crate::nodes::{Node, NodeCreator};
 use crate::nodes::tags::condition::ConditionNode;
-use crate::parsers::tag_parser::TAG_START;
+
+pub const TAG_START: &str = "{%";
+pub const TAG_END: &str = "%}";
 
 pub const NODE_CREATORS: [NodeCreator; 1] = [
     ConditionNode::try_create_from_template,

@@ -7,7 +7,7 @@ pub mod static_node;
 use crate::context::build_context::BuildContext;
 use crate::context::render_context::RenderContext;
 use crate::engine::{NodeBuildResult, RenderResult};
-use crate::parsers::tag_parser::TAG_START;
+use crate::nodes::tags::TAG_START;
 
 const EXPRESSION_START: &str = "{{";
 const EXPRESSION_END: &str = "}}";
